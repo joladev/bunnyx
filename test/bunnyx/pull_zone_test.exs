@@ -74,7 +74,7 @@ defmodule Bunnyx.PullZoneTest do
       response = Bunnyx.Factory.pull_zone_response(%{"Name" => "new-zone"})
 
       expect(Bunnyx.HTTP, :request, fn _req, :post, "/pullzone", opts ->
-        assert opts[:body] == %{"Name" => "new-zone", "OriginUrl" => "https://example.com"}
+        assert opts[:json] == %{"Name" => "new-zone", "OriginUrl" => "https://example.com"}
         {:ok, response}
       end)
 
@@ -88,7 +88,7 @@ defmodule Bunnyx.PullZoneTest do
       response = Bunnyx.Factory.pull_zone_response(%{"CacheControlMaxAgeOverride" => 3600})
 
       expect(Bunnyx.HTTP, :request, fn _req, :post, "/pullzone/12345", opts ->
-        assert opts[:body] == %{"CacheControlMaxAgeOverride" => 3600}
+        assert opts[:json] == %{"CacheControlMaxAgeOverride" => 3600}
         {:ok, response}
       end)
 

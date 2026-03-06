@@ -110,7 +110,7 @@ defmodule Bunnyx.PullZone do
   def create(client, attrs) do
     client = Bunnyx.resolve(client)
 
-    case Bunnyx.HTTP.request(client.req, :post, "/pullzone", body: to_request_body(attrs)) do
+    case Bunnyx.HTTP.request(client.req, :post, "/pullzone", json: to_request_body(attrs)) do
       {:ok, body} -> {:ok, from_response(body)}
       {:error, _} = error -> error
     end
@@ -121,7 +121,7 @@ defmodule Bunnyx.PullZone do
   def update(client, id, attrs) do
     client = Bunnyx.resolve(client)
 
-    case Bunnyx.HTTP.request(client.req, :post, "/pullzone/#{id}", body: to_request_body(attrs)) do
+    case Bunnyx.HTTP.request(client.req, :post, "/pullzone/#{id}", json: to_request_body(attrs)) do
       {:ok, body} -> {:ok, from_response(body)}
       {:error, _} = error -> error
     end

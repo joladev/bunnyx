@@ -55,13 +55,22 @@ defmodule Bunnyx.HTTPTest do
                Bunnyx.HTTP.request(req, :get, "/pullzone")
     end
 
-    test "passes body as :json option", %{req: req} do
+    test "passes json through", %{req: req} do
       expect(Req, :request, fn _req, opts ->
         assert opts[:json] == %{"Name" => "test"}
         {:ok, %Req.Response{status: 200, body: %{}}}
       end)
 
-      Bunnyx.HTTP.request(req, :post, "/pullzone", body: %{"Name" => "test"})
+      Bunnyx.HTTP.request(req, :post, "/pullzone", json: %{"Name" => "test"})
+    end
+
+    test "passes body through", %{req: req} do
+      expect(Req, :request, fn _req, opts ->
+        assert opts[:body] == "raw binary"
+        {:ok, %Req.Response{status: 200, body: %{}}}
+      end)
+
+      Bunnyx.HTTP.request(req, :put, "/zone/file.txt", body: "raw binary")
     end
 
     test "passes params through", %{req: req} do
