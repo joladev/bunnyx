@@ -15,6 +15,9 @@ jobs:
       matrix:
         include:
           - elixir: "1.19"
+            otp: "27"
+            unlock: false
+          - elixir: "1.19"
             otp: "28"
             unlock: false
           - elixir: "1.19"
