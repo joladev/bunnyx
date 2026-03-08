@@ -1,6 +1,16 @@
 defmodule Bunnyx.DnsRecord do
   @moduledoc """
-  DNS Record API.
+  DNS records within a zone. Records are nested under a `Bunnyx.DnsZone` — all
+  operations require the parent zone's ID.
+
+  Uses the main API client created with `Bunnyx.new/1`.
+
+  ## Record types
+
+  The `:type` field is an integer matching bunny.net's record type constants:
+  `0` = A, `1` = AAAA, `2` = CNAME, `3` = TXT, `4` = MX, `5` = Redirect,
+  `6` = Flatten, `7` = Pull Zone, `8` = SRV, `9` = CAA, `10` = PTR,
+  `11` = Script, `12` = NS.
 
   ## Usage
 

@@ -1,6 +1,9 @@
 defmodule Bunnyx.PullZone do
   @moduledoc """
-  Pull Zone API.
+  Pull zones are bunny.net's CDN distribution points. Each pull zone pulls content
+  from your origin server and caches it across their global edge network.
+
+  Uses the main API client created with `Bunnyx.new/1`.
 
   ## Usage
 

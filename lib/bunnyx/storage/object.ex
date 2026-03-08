@@ -1,5 +1,10 @@
 defmodule Bunnyx.Storage.Object do
-  @moduledoc "File or directory entry returned by storage zone listing."
+  @moduledoc """
+  File or directory entry returned by `Bunnyx.Storage.list/2`.
+
+  The `:is_directory` field distinguishes folders from files. For files,
+  `:length` is the size in bytes and `:content_type` is the MIME type.
+  """
 
   @type t :: %__MODULE__{
           guid: String.t() | nil,

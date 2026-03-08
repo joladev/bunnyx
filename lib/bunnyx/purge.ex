@@ -1,6 +1,11 @@
 defmodule Bunnyx.Purge do
   @moduledoc """
-  Purge API.
+  Cache purging. When you update content at your origin, the CDN keeps serving the
+  old cached version until it expires. Purging forces edge servers to fetch the new
+  version immediately.
+
+  You can purge a single URL or an entire pull zone's cache. Uses the main API client
+  created with `Bunnyx.new/1`.
 
   ## Usage
 

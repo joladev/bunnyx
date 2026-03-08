@@ -1,5 +1,9 @@
 defmodule Bunnyx.HTTP do
-  @moduledoc "Generic HTTP wrapper for bunny.net API calls."
+  @moduledoc """
+  Low-level HTTP layer. All API modules go through `request/4` — they never
+  call Req directly. You shouldn't need to use this module unless you're
+  extending Bunnyx with unsupported endpoints.
+  """
 
   @type method :: :get | :post | :put | :delete
 

@@ -1,6 +1,9 @@
 defmodule Bunnyx.DnsZone do
   @moduledoc """
-  DNS Zone API.
+  DNS zones. bunny.net can host your domain's DNS alongside its CDN. A zone
+  represents a domain and contains DNS records managed through `Bunnyx.DnsRecord`.
+
+  Uses the main API client created with `Bunnyx.new/1`.
 
   ## Usage
 
@@ -11,6 +14,9 @@ defmodule Bunnyx.DnsZone do
       {:ok, page} = Bunnyx.DnsZone.list(client)
       {:ok, zone} = Bunnyx.DnsZone.update(client, zone.id, logging_enabled: true)
       {:ok, nil} = Bunnyx.DnsZone.delete(client, zone.id)
+
+  Fetching a zone with `get/2` includes its records as a list of `%Bunnyx.DnsRecord{}`
+  structs in the `:records` field.
   """
 
   alias Bunnyx.DnsRecord

@@ -1,6 +1,11 @@
 defmodule Bunnyx.Storage do
   @moduledoc """
-  Edge Storage API.
+  Edge storage lets you store and serve files directly from bunny.net's network,
+  without needing your own origin server.
+
+  Storage uses a **separate client** from the main API because it has its own
+  authentication (a per-zone storage password) and a different base URL.
+  Create one with `Bunnyx.Storage.new/1`.
 
   ## Usage
 
@@ -10,6 +15,10 @@ defmodule Bunnyx.Storage do
       {:ok, binary} = Bunnyx.Storage.get(client, "/images/logo.png")
       {:ok, nil} = Bunnyx.Storage.put(client, "/images/new.png", data)
       {:ok, nil} = Bunnyx.Storage.delete(client, "/images/old.png")
+
+  For storage zones in a specific region, pass the `:region` option:
+
+      client = Bunnyx.Storage.new(storage_key: "pw-...", zone: "my-zone", region: "de")
   """
 
   alias Bunnyx.Storage.Object
