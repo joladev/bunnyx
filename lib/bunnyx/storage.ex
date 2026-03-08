@@ -19,6 +19,17 @@ defmodule Bunnyx.Storage do
   @enforce_keys [:req, :zone]
   defstruct [:req, :zone]
 
+  @doc """
+  Creates a new storage client.
+
+  ## Options
+
+    * `:storage_key` (required) — your storage zone password
+    * `:zone` (required) — the storage zone name
+    * `:region` — storage region (e.g. `"de"`, `"ny"`). Defaults to the primary region.
+    * `:finch` — a custom Finch pool name
+
+  """
   @spec new(keyword()) :: t()
   def new(opts) do
     storage_key = Keyword.fetch!(opts, :storage_key)
@@ -46,6 +57,7 @@ defmodule Bunnyx.Storage do
   def resolve(%__MODULE__{} = client), do: client
   def resolve(opts) when is_list(opts), do: new(opts)
 
+  @doc "Lists files and directories at the given path."
   @spec list(t() | keyword(), String.t()) ::
           {:ok, [Object.t()]} | {:error, Bunnyx.Error.t()}
   def list(client, path \\ "/") do
@@ -58,6 +70,7 @@ defmodule Bunnyx.Storage do
     end
   end
 
+  @doc "Downloads a file and returns its binary content."
   @spec get(t() | keyword(), String.t()) ::
           {:ok, binary()} | {:error, Bunnyx.Error.t()}
   def get(client, path) do
@@ -69,6 +82,14 @@ defmodule Bunnyx.Storage do
     end
   end
 
+  @doc """
+  Uploads a file.
+
+  ## Options
+
+    * `:checksum` — SHA-256 checksum for integrity verification
+
+  """
   @spec put(t() | keyword(), String.t(), binary(), keyword()) ::
           {:ok, nil} | {:error, Bunnyx.Error.t()}
   def put(client, path, data, opts \\ []) do
@@ -82,6 +103,7 @@ defmodule Bunnyx.Storage do
     end
   end
 
+  @doc "Deletes a file."
   @spec delete(t() | keyword(), String.t()) ::
           {:ok, nil} | {:error, Bunnyx.Error.t()}
   def delete(client, path) do

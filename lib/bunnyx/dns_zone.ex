@@ -74,6 +74,16 @@ defmodule Bunnyx.DnsZone do
 
   @reverse_mapping Map.new(@field_mapping, fn {pascal, atom} -> {atom, pascal} end)
 
+  @doc """
+  Lists DNS zones.
+
+  ## Options
+
+    * `:page` — page number
+    * `:per_page` — items per page
+    * `:search` — search term
+
+  """
   @spec list(Bunnyx.t() | keyword(), keyword()) ::
           {:ok,
            %{
@@ -106,6 +116,7 @@ defmodule Bunnyx.DnsZone do
     end
   end
 
+  @doc "Fetches a DNS zone by ID, including its records."
   @spec get(Bunnyx.t() | keyword(), pos_integer()) :: {:ok, t()} | {:error, Bunnyx.Error.t()}
   def get(client, id) do
     client = Bunnyx.resolve(client)
@@ -116,6 +127,7 @@ defmodule Bunnyx.DnsZone do
     end
   end
 
+  @doc "Creates a DNS zone with the given attributes."
   @spec create(Bunnyx.t() | keyword(), keyword()) :: {:ok, t()} | {:error, Bunnyx.Error.t()}
   def create(client, attrs) do
     client = Bunnyx.resolve(client)
@@ -126,6 +138,7 @@ defmodule Bunnyx.DnsZone do
     end
   end
 
+  @doc "Updates a DNS zone."
   @spec update(Bunnyx.t() | keyword(), pos_integer(), keyword()) ::
           {:ok, t()} | {:error, Bunnyx.Error.t()}
   def update(client, id, attrs) do
@@ -137,6 +150,7 @@ defmodule Bunnyx.DnsZone do
     end
   end
 
+  @doc "Deletes a DNS zone."
   @spec delete(Bunnyx.t() | keyword(), pos_integer()) :: {:ok, nil} | {:error, Bunnyx.Error.t()}
   def delete(client, id) do
     client = Bunnyx.resolve(client)

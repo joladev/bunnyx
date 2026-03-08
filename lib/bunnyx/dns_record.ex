@@ -77,6 +77,7 @@ defmodule Bunnyx.DnsRecord do
     struct(__MODULE__, fields)
   end
 
+  @doc "Adds a DNS record to a zone."
   @spec add(Bunnyx.t() | keyword(), pos_integer(), keyword()) ::
           {:ok, t()} | {:error, Bunnyx.Error.t()}
   def add(client, zone_id, attrs) do
@@ -90,6 +91,7 @@ defmodule Bunnyx.DnsRecord do
     end
   end
 
+  @doc "Updates a DNS record."
   @spec update(Bunnyx.t() | keyword(), pos_integer(), pos_integer(), keyword()) ::
           {:ok, t()} | {:error, Bunnyx.Error.t()}
   def update(client, zone_id, id, attrs) do
@@ -103,6 +105,7 @@ defmodule Bunnyx.DnsRecord do
     end
   end
 
+  @doc "Deletes a DNS record from a zone."
   @spec delete(Bunnyx.t() | keyword(), pos_integer(), pos_integer()) ::
           {:ok, nil} | {:error, Bunnyx.Error.t()}
   def delete(client, zone_id, id) do

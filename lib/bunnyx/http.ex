@@ -3,6 +3,7 @@ defmodule Bunnyx.HTTP do
 
   @type method :: :get | :post | :put | :delete
 
+  @doc "Performs an HTTP request against the bunny.net API."
   @spec request(Req.Request.t(), method(), String.t(), keyword()) ::
           {:ok, term()} | {:error, Bunnyx.Error.t()}
   def request(req, method, path, opts \\ []) do

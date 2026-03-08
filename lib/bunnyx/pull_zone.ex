@@ -64,6 +64,16 @@ defmodule Bunnyx.PullZone do
 
   @reverse_mapping Map.new(@field_mapping, fn {pascal, atom} -> {atom, pascal} end)
 
+  @doc """
+  Lists pull zones.
+
+  ## Options
+
+    * `:page` — page number
+    * `:per_page` — items per page
+    * `:search` — search term
+
+  """
   @spec list(Bunnyx.t() | keyword(), keyword()) ::
           {:ok,
            %{
@@ -96,6 +106,7 @@ defmodule Bunnyx.PullZone do
     end
   end
 
+  @doc "Fetches a pull zone by ID."
   @spec get(Bunnyx.t() | keyword(), pos_integer()) :: {:ok, t()} | {:error, Bunnyx.Error.t()}
   def get(client, id) do
     client = Bunnyx.resolve(client)
@@ -106,6 +117,7 @@ defmodule Bunnyx.PullZone do
     end
   end
 
+  @doc "Creates a pull zone with the given attributes."
   @spec create(Bunnyx.t() | keyword(), keyword()) :: {:ok, t()} | {:error, Bunnyx.Error.t()}
   def create(client, attrs) do
     client = Bunnyx.resolve(client)
@@ -116,6 +128,7 @@ defmodule Bunnyx.PullZone do
     end
   end
 
+  @doc "Updates a pull zone."
   @spec update(Bunnyx.t() | keyword(), pos_integer(), keyword()) ::
           {:ok, t()} | {:error, Bunnyx.Error.t()}
   def update(client, id, attrs) do
@@ -127,6 +140,7 @@ defmodule Bunnyx.PullZone do
     end
   end
 
+  @doc "Deletes a pull zone."
   @spec delete(Bunnyx.t() | keyword(), pos_integer()) :: {:ok, nil} | {:error, Bunnyx.Error.t()}
   def delete(client, id) do
     client = Bunnyx.resolve(client)

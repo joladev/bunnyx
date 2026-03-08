@@ -17,6 +17,19 @@ defmodule Bunnyx do
   @enforce_keys [:req]
   defstruct [:req]
 
+  @doc """
+  Creates a new API client.
+
+  ## Options
+
+    * `:api_key` (required) — your bunny.net API key
+    * `:finch` — a custom Finch pool name
+
+  ## Examples
+
+      client = Bunnyx.new(api_key: "sk-...")
+
+  """
   @spec new(keyword()) :: t()
   def new(opts) do
     api_key = Keyword.fetch!(opts, :api_key)

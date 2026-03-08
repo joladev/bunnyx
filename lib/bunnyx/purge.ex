@@ -12,6 +12,15 @@ defmodule Bunnyx.Purge do
       {:ok, nil} = Bunnyx.Purge.pull_zone(client, 12345, cache_tag: "images")
   """
 
+  @doc """
+  Purges a URL from the CDN cache.
+
+  ## Options
+
+    * `:async` — perform the purge asynchronously
+    * `:exact_path` — only purge the exact URL (no wildcard)
+
+  """
   @spec url(Bunnyx.t() | keyword(), String.t(), keyword()) ::
           {:ok, nil} | {:error, Bunnyx.Error.t()}
   def url(client, url, opts \\ []) do
@@ -24,6 +33,14 @@ defmodule Bunnyx.Purge do
     end
   end
 
+  @doc """
+  Purges an entire pull zone's cache.
+
+  ## Options
+
+    * `:cache_tag` — only purge items with this cache tag
+
+  """
   @spec pull_zone(Bunnyx.t() | keyword(), pos_integer(), keyword()) ::
           {:ok, nil} | {:error, Bunnyx.Error.t()}
   def pull_zone(client, id, opts \\ []) do
