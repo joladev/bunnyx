@@ -50,4 +50,61 @@ defmodule Bunnyx.Factory do
       overrides
     )
   end
+
+  def dns_record_response(overrides \\ %{}) do
+    Map.merge(
+      %{
+        "Id" => 99_001,
+        "Type" => 0,
+        "Ttl" => 300,
+        "Value" => "1.2.3.4",
+        "Name" => "www",
+        "Weight" => 0,
+        "Priority" => 0,
+        "Port" => 0,
+        "Flags" => 0,
+        "Tag" => "",
+        "Accelerated" => false,
+        "Disabled" => false,
+        "Comment" => ""
+      },
+      overrides
+    )
+  end
+
+  def dns_zone_response(overrides \\ %{}) do
+    Map.merge(
+      %{
+        "Id" => 50_001,
+        "Domain" => "example.com",
+        "Records" => [dns_record_response()],
+        "DateModified" => "2025-06-01T12:00:00Z",
+        "DateCreated" => "2025-01-01T00:00:00Z",
+        "NameserversDetected" => true,
+        "CustomNameserversEnabled" => false,
+        "Nameserver1" => "ns1.bunny.net",
+        "Nameserver2" => "ns2.bunny.net",
+        "SoaEmail" => "admin@example.com",
+        "NameserversNextCheck" => "2025-06-02T00:00:00Z",
+        "LoggingEnabled" => false,
+        "LoggingIPAnonymizationEnabled" => false,
+        "LogAnonymizationType" => 0,
+        "DnsSecEnabled" => false,
+        "CertificateKeyType" => 0
+      },
+      overrides
+    )
+  end
+
+  def dns_zone_list_response(overrides \\ %{}) do
+    Map.merge(
+      %{
+        "Items" => [dns_zone_response()],
+        "CurrentPage" => 1,
+        "TotalItems" => 1,
+        "HasMoreItems" => false
+      },
+      overrides
+    )
+  end
 end
