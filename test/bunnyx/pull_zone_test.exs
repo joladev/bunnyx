@@ -149,6 +149,48 @@ defmodule Bunnyx.PullZoneTest do
     end
   end
 
+  describe "add_blocked_ip/3" do
+    test "sends IP and returns {:ok, nil}", %{client: client} do
+      expect(Bunnyx.HTTP, :request, fn _req, :post, "/pullzone/12345/addBlockedIp", opts ->
+        assert opts[:json] == %{"Value" => "1.2.3.4"}
+        {:ok, ""}
+      end)
+
+      assert {:ok, nil} = Bunnyx.PullZone.add_blocked_ip(client, 12_345, "1.2.3.4")
+    end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 400, message: "Bad request"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :post, "/pullzone/12345/addBlockedIp", _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} = Bunnyx.PullZone.add_blocked_ip(client, 12_345, "1.2.3.4")
+    end
+  end
+
+  describe "remove_blocked_ip/3" do
+    test "sends IP and returns {:ok, nil}", %{client: client} do
+      expect(Bunnyx.HTTP, :request, fn _req, :post, "/pullzone/12345/removeBlockedIp", opts ->
+        assert opts[:json] == %{"Value" => "1.2.3.4"}
+        {:ok, ""}
+      end)
+
+      assert {:ok, nil} = Bunnyx.PullZone.remove_blocked_ip(client, 12_345, "1.2.3.4")
+    end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 400, message: "Bad request"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :post, "/pullzone/12345/removeBlockedIp", _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} = Bunnyx.PullZone.remove_blocked_ip(client, 12_345, "1.2.3.4")
+    end
+  end
+
   describe "resolve" do
     test "accepts keyword list as client" do
       response = Bunnyx.Factory.pull_zone_response()
