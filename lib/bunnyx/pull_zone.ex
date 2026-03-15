@@ -454,6 +454,20 @@ defmodule Bunnyx.PullZone do
     end
   end
 
+  @doc "Updates the SSL private key type for a hostname on a pull zone (0 = ECDSA, 1 = RSA)."
+  @spec update_private_key_type(Bunnyx.t() | keyword(), pos_integer(), String.t(), integer()) ::
+          {:ok, nil} | {:error, Bunnyx.Error.t()}
+  def update_private_key_type(client, id, hostname, key_type) do
+    client = Bunnyx.resolve(client)
+
+    case Bunnyx.HTTP.request(client.req, :post, "/pullzone/#{id}/updatePrivateKeyType",
+           json: %{"Hostname" => hostname, "KeyType" => key_type}
+         ) do
+      {:ok, _} -> {:ok, nil}
+      {:error, _} = error -> error
+    end
+  end
+
   @doc "Enables or disables forced SSL for a hostname on a pull zone."
   @spec set_force_ssl(Bunnyx.t() | keyword(), pos_integer(), String.t(), boolean()) ::
           {:ok, nil} | {:error, Bunnyx.Error.t()}

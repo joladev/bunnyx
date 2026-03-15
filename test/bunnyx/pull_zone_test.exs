@@ -461,6 +461,35 @@ defmodule Bunnyx.PullZoneTest do
     end
   end
 
+  describe "update_private_key_type/4" do
+    test "sends hostname and key type", %{client: client} do
+      expect(Bunnyx.HTTP, :request, fn _req,
+                                       :post,
+                                       "/pullzone/12345/updatePrivateKeyType",
+                                       opts ->
+        assert opts[:json] == %{"Hostname" => "cdn.example.com", "KeyType" => 0}
+        {:ok, ""}
+      end)
+
+      assert {:ok, nil} =
+               Bunnyx.PullZone.update_private_key_type(client, 12_345, "cdn.example.com", 0)
+    end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 404, message: "Not found"}
+
+      expect(Bunnyx.HTTP, :request, fn _req,
+                                       :post,
+                                       "/pullzone/12345/updatePrivateKeyType",
+                                       _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} =
+               Bunnyx.PullZone.update_private_key_type(client, 12_345, "cdn.example.com", 1)
+    end
+  end
+
   describe "load_free_certificate/2" do
     test "sends hostname and returns {:ok, nil}", %{client: client} do
       expect(Bunnyx.HTTP, :request, fn _req, :get, "/pullzone/loadFreeCertificate", opts ->
