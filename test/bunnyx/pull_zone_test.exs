@@ -232,6 +232,134 @@ defmodule Bunnyx.PullZoneTest do
     end
   end
 
+  describe "optimizer_statistics/3" do
+    test "returns parsed statistics", %{client: client} do
+      response = %{
+        "RequestsOptimizedChart" => %{"2025-06-01" => 100},
+        "AverageCompressionChart" => %{"2025-06-01" => 50},
+        "TrafficSavedChart" => %{"2025-06-01" => 200},
+        "AverageProcessingTimeChart" => %{"2025-06-01" => 10},
+        "TotalRequestsOptimized" => 100,
+        "TotalTrafficSaved" => 200,
+        "AverageProcessingTime" => 10.5,
+        "AverageCompressionRatio" => 0.65
+      }
+
+      expect(Bunnyx.HTTP, :request, fn _req, :get, "/pullzone/12345/optimizer/statistics", opts ->
+        assert opts[:params] == %{}
+        {:ok, response}
+      end)
+
+      assert {:ok, stats} = Bunnyx.PullZone.optimizer_statistics(client, 12_345)
+      assert stats.total_requests_optimized == 100
+      assert stats.average_compression_ratio == 0.65
+    end
+
+    test "passes date and hourly params", %{client: client} do
+      response = %{
+        "RequestsOptimizedChart" => %{},
+        "AverageCompressionChart" => %{},
+        "TrafficSavedChart" => %{},
+        "AverageProcessingTimeChart" => %{},
+        "TotalRequestsOptimized" => 0,
+        "TotalTrafficSaved" => 0,
+        "AverageProcessingTime" => 0,
+        "AverageCompressionRatio" => 0
+      }
+
+      expect(Bunnyx.HTTP, :request, fn _req, :get, "/pullzone/12345/optimizer/statistics", opts ->
+        assert opts[:params] == %{
+                 "dateFrom" => "2025-06-01",
+                 "dateTo" => "2025-06-30",
+                 "hourly" => true
+               }
+
+        {:ok, response}
+      end)
+
+      Bunnyx.PullZone.optimizer_statistics(client, 12_345,
+        date_from: "2025-06-01",
+        date_to: "2025-06-30",
+        hourly: true
+      )
+    end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 500, message: "Server error"}
+
+      expect(Bunnyx.HTTP, :request, fn _req,
+                                       :get,
+                                       "/pullzone/12345/optimizer/statistics",
+                                       _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} = Bunnyx.PullZone.optimizer_statistics(client, 12_345)
+    end
+  end
+
+  describe "safehop_statistics/3" do
+    test "returns parsed statistics", %{client: client} do
+      response = %{
+        "RequestsRetriedChart" => %{"2025-06-01" => 10},
+        "RequestsSavedChart" => %{"2025-06-01" => 90},
+        "TotalRequestsRetried" => 10,
+        "TotalRequestsSaved" => 90
+      }
+
+      expect(Bunnyx.HTTP, :request, fn _req, :get, "/pullzone/12345/safehop/statistics", _opts ->
+        {:ok, response}
+      end)
+
+      assert {:ok, stats} = Bunnyx.PullZone.safehop_statistics(client, 12_345)
+      assert stats.total_requests_retried == 10
+      assert stats.total_requests_saved == 90
+    end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 500, message: "Server error"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :get, "/pullzone/12345/safehop/statistics", _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} = Bunnyx.PullZone.safehop_statistics(client, 12_345)
+    end
+  end
+
+  describe "origin_shield_statistics/3" do
+    test "returns parsed statistics", %{client: client} do
+      response = %{
+        "ConcurrentRequestsChart" => %{"2025-06-01" => 50},
+        "QueuedRequestsChart" => %{"2025-06-01" => 5}
+      }
+
+      expect(Bunnyx.HTTP, :request, fn _req,
+                                       :get,
+                                       "/pullzone/12345/originshield/queuestatistics",
+                                       _opts ->
+        {:ok, response}
+      end)
+
+      assert {:ok, stats} = Bunnyx.PullZone.origin_shield_statistics(client, 12_345)
+      assert stats.concurrent_requests_chart == %{"2025-06-01" => 50}
+      assert stats.queued_requests_chart == %{"2025-06-01" => 5}
+    end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 500, message: "Server error"}
+
+      expect(Bunnyx.HTTP, :request, fn _req,
+                                       :get,
+                                       "/pullzone/12345/originshield/queuestatistics",
+                                       _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} = Bunnyx.PullZone.origin_shield_statistics(client, 12_345)
+    end
+  end
+
   describe "resolve" do
     test "accepts keyword list as client" do
       response = Bunnyx.Factory.pull_zone_response()

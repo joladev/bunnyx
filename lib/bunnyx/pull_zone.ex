@@ -236,6 +236,126 @@ defmodule Bunnyx.PullZone do
     end
   end
 
+  @doc """
+  Returns optimizer statistics for a pull zone.
+
+  ## Options
+
+    * `:date_from` — start date (ISO 8601 string)
+    * `:date_to` — end date (ISO 8601 string)
+    * `:hourly` — group by hour instead of day
+
+  """
+  @spec optimizer_statistics(Bunnyx.t() | keyword(), pos_integer(), keyword()) ::
+          {:ok,
+           %{
+             requests_optimized_chart: map(),
+             average_compression_chart: map(),
+             traffic_saved_chart: map(),
+             average_processing_time_chart: map(),
+             total_requests_optimized: number(),
+             total_traffic_saved: number(),
+             average_processing_time: number(),
+             average_compression_ratio: number()
+           }}
+          | {:error, Bunnyx.Error.t()}
+  def optimizer_statistics(client, id, opts \\ []) do
+    client = Bunnyx.resolve(client)
+    params = to_statistics_params(opts)
+
+    case Bunnyx.HTTP.request(client.req, :get, "/pullzone/#{id}/optimizer/statistics",
+           params: params
+         ) do
+      {:ok, body} ->
+        {:ok,
+         %{
+           requests_optimized_chart: body["RequestsOptimizedChart"],
+           average_compression_chart: body["AverageCompressionChart"],
+           traffic_saved_chart: body["TrafficSavedChart"],
+           average_processing_time_chart: body["AverageProcessingTimeChart"],
+           total_requests_optimized: body["TotalRequestsOptimized"],
+           total_traffic_saved: body["TotalTrafficSaved"],
+           average_processing_time: body["AverageProcessingTime"],
+           average_compression_ratio: body["AverageCompressionRatio"]
+         }}
+
+      {:error, _} = error ->
+        error
+    end
+  end
+
+  @doc """
+  Returns SafeHop statistics for a pull zone.
+
+  ## Options
+
+    * `:date_from` — start date (ISO 8601 string)
+    * `:date_to` — end date (ISO 8601 string)
+    * `:hourly` — group by hour instead of day
+
+  """
+  @spec safehop_statistics(Bunnyx.t() | keyword(), pos_integer(), keyword()) ::
+          {:ok,
+           %{
+             requests_retried_chart: map(),
+             requests_saved_chart: map(),
+             total_requests_retried: number(),
+             total_requests_saved: number()
+           }}
+          | {:error, Bunnyx.Error.t()}
+  def safehop_statistics(client, id, opts \\ []) do
+    client = Bunnyx.resolve(client)
+    params = to_statistics_params(opts)
+
+    case Bunnyx.HTTP.request(client.req, :get, "/pullzone/#{id}/safehop/statistics",
+           params: params
+         ) do
+      {:ok, body} ->
+        {:ok,
+         %{
+           requests_retried_chart: body["RequestsRetriedChart"],
+           requests_saved_chart: body["RequestsSavedChart"],
+           total_requests_retried: body["TotalRequestsRetried"],
+           total_requests_saved: body["TotalRequestsSaved"]
+         }}
+
+      {:error, _} = error ->
+        error
+    end
+  end
+
+  @doc """
+  Returns origin shield queue statistics for a pull zone.
+
+  ## Options
+
+    * `:date_from` — start date (ISO 8601 string)
+    * `:date_to` — end date (ISO 8601 string)
+    * `:hourly` — group by hour instead of day
+
+  """
+  @spec origin_shield_statistics(Bunnyx.t() | keyword(), pos_integer(), keyword()) ::
+          {:ok, %{concurrent_requests_chart: map(), queued_requests_chart: map()}}
+          | {:error, Bunnyx.Error.t()}
+  def origin_shield_statistics(client, id, opts \\ []) do
+    client = Bunnyx.resolve(client)
+    params = to_statistics_params(opts)
+
+    case Bunnyx.HTTP.request(client.req, :get, "/pullzone/#{id}/originshield/queuestatistics",
+           params: params
+         ) do
+      {:ok, body} ->
+        {:ok,
+         %{
+           concurrent_requests_chart: body["ConcurrentRequestsChart"],
+           queued_requests_chart: body["QueuedRequestsChart"]
+         }}
+
+      {:error, _} = error ->
+        error
+    end
+  end
+
   defp from_response(data) when is_map(data) do
     fields =
       for {pascal, atom} <- @field_mapping, Map.has_key?(data, pascal), into: %{} do
@@ -249,6 +369,16 @@ defmodule Bunnyx.PullZone do
     Map.new(attrs, fn {key, value} ->
       pascal = Map.fetch!(@reverse_mapping, key)
       {pascal, value}
+    end)
+  end
+
+  defp to_statistics_params(opts) do
+    mapping = %{date_from: "dateFrom", date_to: "dateTo", hourly: "hourly"}
+
+    opts
+    |> Keyword.take([:date_from, :date_to, :hourly])
+    |> Map.new(fn {key, value} ->
+      {Map.fetch!(mapping, key), value}
     end)
   end
 
