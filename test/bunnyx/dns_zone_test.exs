@@ -108,6 +108,46 @@ defmodule Bunnyx.DnsZoneTest do
     end
   end
 
+  describe "enable_dnssec/2" do
+    test "returns {:ok, nil}", %{client: client} do
+      expect(Bunnyx.HTTP, :request, fn _req, :post, "/dnszone/50001/dnssec", _opts ->
+        {:ok, ""}
+      end)
+
+      assert {:ok, nil} = Bunnyx.DnsZone.enable_dnssec(client, 50_001)
+    end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 500, message: "Server error"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :post, "/dnszone/50001/dnssec", _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} = Bunnyx.DnsZone.enable_dnssec(client, 50_001)
+    end
+  end
+
+  describe "disable_dnssec/2" do
+    test "returns {:ok, nil}", %{client: client} do
+      expect(Bunnyx.HTTP, :request, fn _req, :delete, "/dnszone/50001/dnssec", _opts ->
+        {:ok, ""}
+      end)
+
+      assert {:ok, nil} = Bunnyx.DnsZone.disable_dnssec(client, 50_001)
+    end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 500, message: "Server error"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :delete, "/dnszone/50001/dnssec", _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} = Bunnyx.DnsZone.disable_dnssec(client, 50_001)
+    end
+  end
+
   describe "resolve" do
     test "accepts keyword list as client" do
       response = Bunnyx.Factory.dns_zone_response()

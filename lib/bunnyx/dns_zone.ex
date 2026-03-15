@@ -167,6 +167,30 @@ defmodule Bunnyx.DnsZone do
     end
   end
 
+  @doc "Enables DNSSEC for a DNS zone."
+  @spec enable_dnssec(Bunnyx.t() | keyword(), pos_integer()) ::
+          {:ok, nil} | {:error, Bunnyx.Error.t()}
+  def enable_dnssec(client, id) do
+    client = Bunnyx.resolve(client)
+
+    case Bunnyx.HTTP.request(client.req, :post, "/dnszone/#{id}/dnssec", []) do
+      {:ok, _} -> {:ok, nil}
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc "Disables DNSSEC for a DNS zone."
+  @spec disable_dnssec(Bunnyx.t() | keyword(), pos_integer()) ::
+          {:ok, nil} | {:error, Bunnyx.Error.t()}
+  def disable_dnssec(client, id) do
+    client = Bunnyx.resolve(client)
+
+    case Bunnyx.HTTP.request(client.req, :delete, "/dnszone/#{id}/dnssec", []) do
+      {:ok, _} -> {:ok, nil}
+      {:error, _} = error -> error
+    end
+  end
+
   defp from_response(data) when is_map(data) do
     fields =
       for {pascal, atom} <- @field_mapping, Map.has_key?(data, pascal), into: %{} do
