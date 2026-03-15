@@ -148,6 +148,60 @@ defmodule Bunnyx.DnsZoneTest do
     end
   end
 
+  describe "export/2" do
+    test "returns zone file text", %{client: client} do
+      zone_file = "example.com. 3600 IN A 1.2.3.4\n"
+
+      expect(Bunnyx.HTTP, :request, fn _req, :get, "/dnszone/50001/export", _opts ->
+        {:ok, zone_file}
+      end)
+
+      assert {:ok, ^zone_file} = Bunnyx.DnsZone.export(client, 50_001)
+    end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 404, message: "Not found"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :get, "/dnszone/50001/export", _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} = Bunnyx.DnsZone.export(client, 50_001)
+    end
+  end
+
+  describe "import_records/3" do
+    test "sends zone data and returns result summary", %{client: client} do
+      zone_data = "example.com. 3600 IN A 1.2.3.4\n"
+
+      response = %{
+        "RecordsSuccessful" => 5,
+        "RecordsFailed" => 1,
+        "RecordsSkipped" => 2
+      }
+
+      expect(Bunnyx.HTTP, :request, fn _req, :post, "/dnszone/50001/import", opts ->
+        assert opts[:body] == zone_data
+        {:ok, response}
+      end)
+
+      assert {:ok, result} = Bunnyx.DnsZone.import_records(client, 50_001, zone_data)
+      assert result.records_successful == 5
+      assert result.records_failed == 1
+      assert result.records_skipped == 2
+    end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 400, message: "Bad request"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :post, "/dnszone/50001/import", _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} = Bunnyx.DnsZone.import_records(client, 50_001, "invalid")
+    end
+  end
+
   describe "resolve" do
     test "accepts keyword list as client" do
       response = Bunnyx.Factory.dns_zone_response()

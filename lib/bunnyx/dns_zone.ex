@@ -191,6 +191,44 @@ defmodule Bunnyx.DnsZone do
     end
   end
 
+  @doc "Exports a DNS zone as a BIND-format zone file."
+  @spec export(Bunnyx.t() | keyword(), pos_integer()) ::
+          {:ok, String.t()} | {:error, Bunnyx.Error.t()}
+  def export(client, id) do
+    client = Bunnyx.resolve(client)
+
+    case Bunnyx.HTTP.request(client.req, :get, "/dnszone/#{id}/export", []) do
+      {:ok, body} -> {:ok, body}
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc "Imports DNS records from a BIND-format zone file."
+  @spec import_records(Bunnyx.t() | keyword(), pos_integer(), String.t()) ::
+          {:ok,
+           %{
+             records_successful: integer(),
+             records_failed: integer(),
+             records_skipped: integer()
+           }}
+          | {:error, Bunnyx.Error.t()}
+  def import_records(client, id, zone_data) do
+    client = Bunnyx.resolve(client)
+
+    case Bunnyx.HTTP.request(client.req, :post, "/dnszone/#{id}/import", body: zone_data) do
+      {:ok, body} ->
+        {:ok,
+         %{
+           records_successful: body["RecordsSuccessful"],
+           records_failed: body["RecordsFailed"],
+           records_skipped: body["RecordsSkipped"]
+         }}
+
+      {:error, _} = error ->
+        error
+    end
+  end
+
   defp from_response(data) when is_map(data) do
     fields =
       for {pascal, atom} <- @field_mapping, Map.has_key?(data, pascal), into: %{} do
