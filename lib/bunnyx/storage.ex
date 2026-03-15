@@ -36,6 +36,7 @@ defmodule Bunnyx.Storage do
     * `:storage_key` (required) — your storage zone password
     * `:zone` (required) — the storage zone name
     * `:region` — storage region (e.g. `"de"`, `"ny"`). Defaults to the primary region.
+    * `:receive_timeout` — socket receive timeout in milliseconds (default `15_000`)
     * `:finch` — a custom Finch pool name
 
   """
@@ -52,11 +53,9 @@ defmodule Bunnyx.Storage do
       end
 
     req_opts =
-      maybe_put(
-        [base_url: base_url, headers: [{"AccessKey", storage_key}]],
-        :finch,
-        opts[:finch]
-      )
+      [base_url: base_url, headers: [{"AccessKey", storage_key}]]
+      |> maybe_put(:receive_timeout, opts[:receive_timeout])
+      |> maybe_put(:finch, opts[:finch])
 
     %__MODULE__{req: Req.new(req_opts), zone: zone}
   end

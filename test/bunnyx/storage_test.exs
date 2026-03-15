@@ -25,6 +25,13 @@ defmodule Bunnyx.StorageTest do
     test "raises on missing zone" do
       assert_raise KeyError, fn -> Bunnyx.Storage.new(storage_key: "pw-test") end
     end
+
+    test "accepts custom receive_timeout" do
+      client =
+        Bunnyx.Storage.new(storage_key: "pw-test", zone: "my-zone", receive_timeout: 60_000)
+
+      assert client.req.options.receive_timeout == 60_000
+    end
   end
 
   describe "list/2" do

@@ -51,6 +51,7 @@ defmodule Bunnyx do
   ## Options
 
     * `:api_key` (required) — your bunny.net API key
+    * `:receive_timeout` — socket receive timeout in milliseconds (default `15_000`)
     * `:finch` — a custom Finch pool name
 
   ## Examples
@@ -63,11 +64,9 @@ defmodule Bunnyx do
     api_key = Keyword.fetch!(opts, :api_key)
 
     req_opts =
-      maybe_put(
-        [base_url: "https://api.bunny.net", headers: [{"AccessKey", api_key}]],
-        :finch,
-        opts[:finch]
-      )
+      [base_url: "https://api.bunny.net", headers: [{"AccessKey", api_key}]]
+      |> maybe_put(:receive_timeout, opts[:receive_timeout])
+      |> maybe_put(:finch, opts[:finch])
 
     %__MODULE__{req: Req.new(req_opts)}
   end

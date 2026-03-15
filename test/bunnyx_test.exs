@@ -18,6 +18,12 @@ defmodule BunnyxTest do
 
       assert client.req.options.finch == MyFinch
     end
+
+    test "accepts custom receive_timeout" do
+      client = Bunnyx.new(api_key: "sk-test", receive_timeout: 60_000)
+
+      assert client.req.options.receive_timeout == 60_000
+    end
   end
 
   describe "resolve/1" do
