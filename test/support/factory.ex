@@ -96,6 +96,40 @@ defmodule Bunnyx.Factory do
     )
   end
 
+  def storage_zone_response(overrides \\ %{}) do
+    Map.merge(
+      %{
+        "Id" => 80_001,
+        "Name" => "my-zone",
+        "Password" => "pw-abc123",
+        "ReadOnlyPassword" => "pw-readonly-123",
+        "DateModified" => "2025-06-01T12:00:00Z",
+        "Deleted" => false,
+        "StorageUsed" => 1_073_741_824,
+        "FilesStored" => 500,
+        "Region" => "DE",
+        "ReplicationRegions" => ["NY"],
+        "StorageHostname" => "storage.bunnycdn.com",
+        "Rewrite404To200" => false,
+        "Custom404FilePath" => "",
+        "ZoneTier" => 0
+      },
+      overrides
+    )
+  end
+
+  def storage_zone_list_response(overrides \\ %{}) do
+    Map.merge(
+      %{
+        "Items" => [storage_zone_response()],
+        "CurrentPage" => 1,
+        "TotalItems" => 1,
+        "HasMoreItems" => false
+      },
+      overrides
+    )
+  end
+
   def dns_zone_list_response(overrides \\ %{}) do
     Map.merge(
       %{
