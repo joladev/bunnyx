@@ -202,6 +202,79 @@ defmodule Bunnyx.DnsZoneTest do
     end
   end
 
+  describe "statistics/3" do
+    test "returns parsed statistics", %{client: client} do
+      response = %{
+        "TotalQueriesServed" => 1000,
+        "QueriesServedChart" => %{"2025-06-01" => 500, "2025-06-02" => 500},
+        "NormalQueriesServedChart" => %{"2025-06-01" => 400, "2025-06-02" => 400},
+        "SmartQueriesServedChart" => %{"2025-06-01" => 100, "2025-06-02" => 100},
+        "QueriesByTypeChart" => %{"1" => 800, "28" => 200}
+      }
+
+      expect(Bunnyx.HTTP, :request, fn _req, :get, "/dnszone/50001/statistics", opts ->
+        assert opts[:params] == %{}
+        {:ok, response}
+      end)
+
+      assert {:ok, stats} = Bunnyx.DnsZone.statistics(client, 50_001)
+      assert stats.total_queries_served == 1000
+      assert stats.queries_served_chart == %{"2025-06-01" => 500, "2025-06-02" => 500}
+      assert stats.queries_by_type_chart == %{"1" => 800, "28" => 200}
+    end
+
+    test "passes date params", %{client: client} do
+      response = %{
+        "TotalQueriesServed" => 0,
+        "QueriesServedChart" => %{},
+        "NormalQueriesServedChart" => %{},
+        "SmartQueriesServedChart" => %{},
+        "QueriesByTypeChart" => %{}
+      }
+
+      expect(Bunnyx.HTTP, :request, fn _req, :get, "/dnszone/50001/statistics", opts ->
+        assert opts[:params] == %{"dateFrom" => "2025-06-01", "dateTo" => "2025-06-30"}
+        {:ok, response}
+      end)
+
+      Bunnyx.DnsZone.statistics(client, 50_001,
+        date_from: "2025-06-01",
+        date_to: "2025-06-30"
+      )
+    end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 500, message: "Server error"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :get, "/dnszone/50001/statistics", _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} = Bunnyx.DnsZone.statistics(client, 50_001)
+    end
+  end
+
+  describe "check_availability/2" do
+    test "returns {:ok, nil} when available", %{client: client} do
+      expect(Bunnyx.HTTP, :request, fn _req, :post, "/dnszone/checkavailability", opts ->
+        assert opts[:json] == %{"Name" => "example.com"}
+        {:ok, ""}
+      end)
+
+      assert {:ok, nil} = Bunnyx.DnsZone.check_availability(client, "example.com")
+    end
+
+    test "returns error when unavailable", %{client: client} do
+      error = %Bunnyx.Error{status: 400, message: "Name already taken"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :post, "/dnszone/checkavailability", _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} = Bunnyx.DnsZone.check_availability(client, "taken.com")
+    end
+  end
+
   describe "resolve" do
     test "accepts keyword list as client" do
       response = Bunnyx.Factory.dns_zone_response()

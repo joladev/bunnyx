@@ -229,6 +229,63 @@ defmodule Bunnyx.DnsZone do
     end
   end
 
+  @doc """
+  Returns DNS zone query statistics.
+
+  ## Options
+
+    * `:date_from` — start date (ISO 8601 string)
+    * `:date_to` — end date (ISO 8601 string)
+
+  """
+  @spec statistics(Bunnyx.t() | keyword(), pos_integer(), keyword()) ::
+          {:ok,
+           %{
+             total_queries_served: integer(),
+             queries_served_chart: map(),
+             normal_queries_served_chart: map(),
+             smart_queries_served_chart: map(),
+             queries_by_type_chart: map()
+           }}
+          | {:error, Bunnyx.Error.t()}
+  def statistics(client, id, opts \\ []) do
+    client = Bunnyx.resolve(client)
+
+    params =
+      opts
+      |> Keyword.take([:date_from, :date_to])
+      |> to_statistics_params()
+
+    case Bunnyx.HTTP.request(client.req, :get, "/dnszone/#{id}/statistics", params: params) do
+      {:ok, body} ->
+        {:ok,
+         %{
+           total_queries_served: body["TotalQueriesServed"],
+           queries_served_chart: body["QueriesServedChart"],
+           normal_queries_served_chart: body["NormalQueriesServedChart"],
+           smart_queries_served_chart: body["SmartQueriesServedChart"],
+           queries_by_type_chart: body["QueriesByTypeChart"]
+         }}
+
+      {:error, _} = error ->
+        error
+    end
+  end
+
+  @doc "Checks if a DNS zone name is available."
+  @spec check_availability(Bunnyx.t() | keyword(), String.t()) ::
+          {:ok, nil} | {:error, Bunnyx.Error.t()}
+  def check_availability(client, name) do
+    client = Bunnyx.resolve(client)
+
+    case Bunnyx.HTTP.request(client.req, :post, "/dnszone/checkavailability",
+           json: %{"Name" => name}
+         ) do
+      {:ok, _} -> {:ok, nil}
+      {:error, _} = error -> error
+    end
+  end
+
   defp from_response(data) when is_map(data) do
     fields =
       for {pascal, atom} <- @field_mapping, Map.has_key?(data, pascal), into: %{} do
@@ -247,6 +304,14 @@ defmodule Bunnyx.DnsZone do
     Map.new(attrs, fn {key, value} ->
       pascal = Map.fetch!(@reverse_mapping, key)
       {pascal, value}
+    end)
+  end
+
+  defp to_statistics_params(opts) do
+    mapping = %{date_from: "dateFrom", date_to: "dateTo"}
+
+    Map.new(opts, fn {key, value} ->
+      {Map.fetch!(mapping, key), value}
     end)
   end
 
