@@ -275,6 +275,26 @@ defmodule Bunnyx.DnsZoneTest do
     end
   end
 
+  describe "issue_certificate/2" do
+    test "returns {:ok, nil}", %{client: client} do
+      expect(Bunnyx.HTTP, :request, fn _req, :post, "/dnszone/50001/certificate/issue", _opts ->
+        {:ok, ""}
+      end)
+
+      assert {:ok, nil} = Bunnyx.DnsZone.issue_certificate(client, 50_001)
+    end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 400, message: "Failed to issue certificate"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :post, "/dnszone/50001/certificate/issue", _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} = Bunnyx.DnsZone.issue_certificate(client, 50_001)
+    end
+  end
+
   describe "resolve" do
     test "accepts keyword list as client" do
       response = Bunnyx.Factory.dns_zone_response()

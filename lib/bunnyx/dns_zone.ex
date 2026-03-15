@@ -286,6 +286,18 @@ defmodule Bunnyx.DnsZone do
     end
   end
 
+  @doc "Issues a wildcard certificate for a DNS zone."
+  @spec issue_certificate(Bunnyx.t() | keyword(), pos_integer()) ::
+          {:ok, nil} | {:error, Bunnyx.Error.t()}
+  def issue_certificate(client, id) do
+    client = Bunnyx.resolve(client)
+
+    case Bunnyx.HTTP.request(client.req, :post, "/dnszone/#{id}/certificate/issue", []) do
+      {:ok, _} -> {:ok, nil}
+      {:error, _} = error -> error
+    end
+  end
+
   defp from_response(data) when is_map(data) do
     fields =
       for {pascal, atom} <- @field_mapping, Map.has_key?(data, pascal), into: %{} do
