@@ -154,6 +154,34 @@ defmodule Bunnyx.PullZone do
     end
   end
 
+  @doc "Adds a custom hostname to a pull zone."
+  @spec add_hostname(Bunnyx.t() | keyword(), pos_integer(), String.t()) ::
+          {:ok, nil} | {:error, Bunnyx.Error.t()}
+  def add_hostname(client, id, hostname) do
+    client = Bunnyx.resolve(client)
+
+    case Bunnyx.HTTP.request(client.req, :post, "/pullzone/#{id}/addHostname",
+           json: %{"Hostname" => hostname}
+         ) do
+      {:ok, _} -> {:ok, nil}
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc "Removes a custom hostname from a pull zone."
+  @spec remove_hostname(Bunnyx.t() | keyword(), pos_integer(), String.t()) ::
+          {:ok, nil} | {:error, Bunnyx.Error.t()}
+  def remove_hostname(client, id, hostname) do
+    client = Bunnyx.resolve(client)
+
+    case Bunnyx.HTTP.request(client.req, :delete, "/pullzone/#{id}/removeHostname",
+           json: %{"Hostname" => hostname}
+         ) do
+      {:ok, _} -> {:ok, nil}
+      {:error, _} = error -> error
+    end
+  end
+
   defp from_response(data) when is_map(data) do
     fields =
       for {pascal, atom} <- @field_mapping, Map.has_key?(data, pascal), into: %{} do

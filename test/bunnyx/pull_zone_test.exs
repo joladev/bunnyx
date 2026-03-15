@@ -107,6 +107,48 @@ defmodule Bunnyx.PullZoneTest do
     end
   end
 
+  describe "add_hostname/3" do
+    test "sends hostname and returns {:ok, nil}", %{client: client} do
+      expect(Bunnyx.HTTP, :request, fn _req, :post, "/pullzone/12345/addHostname", opts ->
+        assert opts[:json] == %{"Hostname" => "cdn.example.com"}
+        {:ok, ""}
+      end)
+
+      assert {:ok, nil} = Bunnyx.PullZone.add_hostname(client, 12_345, "cdn.example.com")
+    end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 400, message: "Bad request"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :post, "/pullzone/12345/addHostname", _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} = Bunnyx.PullZone.add_hostname(client, 12_345, "cdn.example.com")
+    end
+  end
+
+  describe "remove_hostname/3" do
+    test "sends hostname and returns {:ok, nil}", %{client: client} do
+      expect(Bunnyx.HTTP, :request, fn _req, :delete, "/pullzone/12345/removeHostname", opts ->
+        assert opts[:json] == %{"Hostname" => "cdn.example.com"}
+        {:ok, ""}
+      end)
+
+      assert {:ok, nil} = Bunnyx.PullZone.remove_hostname(client, 12_345, "cdn.example.com")
+    end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 400, message: "Bad request"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :delete, "/pullzone/12345/removeHostname", _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} = Bunnyx.PullZone.remove_hostname(client, 12_345, "cdn.example.com")
+    end
+  end
+
   describe "resolve" do
     test "accepts keyword list as client" do
       response = Bunnyx.Factory.pull_zone_response()
