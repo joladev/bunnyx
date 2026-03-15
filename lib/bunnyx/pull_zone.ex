@@ -356,6 +356,206 @@ defmodule Bunnyx.PullZone do
     end
   end
 
+  @edge_rule_mapping %{
+    guid: "Guid",
+    action_type: "ActionType",
+    action_parameter_1: "ActionParameter1",
+    action_parameter_2: "ActionParameter2",
+    action_parameter_3: "ActionParameter3",
+    triggers: "Triggers",
+    extra_actions: "ExtraActions",
+    trigger_matching_type: "TriggerMatchingType",
+    description: "Description",
+    enabled: "Enabled",
+    order_index: "OrderIndex",
+    read_only: "ReadOnly"
+  }
+
+  @doc """
+  Adds or updates an edge rule on a pull zone.
+
+  ## Attributes
+
+    * `:action_type` — rule action type (integer)
+    * `:action_parameter_1` — action parameter 1
+    * `:action_parameter_2` — action parameter 2
+    * `:action_parameter_3` — action parameter 3
+    * `:triggers` — list of trigger maps (PascalCase keys)
+    * `:extra_actions` — list of extra action maps (PascalCase keys)
+    * `:trigger_matching_type` — 0 = match any, 1 = match all, 2 = match none
+    * `:description` — rule description
+    * `:enabled` — whether the rule is active
+    * `:guid` — rule GUID (required for updates)
+
+  """
+  @spec add_or_update_edge_rule(Bunnyx.t() | keyword(), pos_integer(), keyword()) ::
+          {:ok, nil} | {:error, Bunnyx.Error.t()}
+  def add_or_update_edge_rule(client, id, attrs) do
+    client = Bunnyx.resolve(client)
+
+    json =
+      Map.new(attrs, fn {key, value} ->
+        {Map.fetch!(@edge_rule_mapping, key), value}
+      end)
+
+    case Bunnyx.HTTP.request(client.req, :post, "/pullzone/#{id}/edgerules/addOrUpdate",
+           json: json
+         ) do
+      {:ok, _} -> {:ok, nil}
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc "Deletes an edge rule from a pull zone."
+  @spec delete_edge_rule(Bunnyx.t() | keyword(), pos_integer(), String.t()) ::
+          {:ok, nil} | {:error, Bunnyx.Error.t()}
+  def delete_edge_rule(client, id, edge_rule_id) do
+    client = Bunnyx.resolve(client)
+
+    case Bunnyx.HTTP.request(
+           client.req,
+           :delete,
+           "/pullzone/#{id}/edgerules/#{edge_rule_id}",
+           []
+         ) do
+      {:ok, _} -> {:ok, nil}
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc "Enables or disables an edge rule on a pull zone."
+  @spec set_edge_rule_enabled(Bunnyx.t() | keyword(), pos_integer(), String.t(), boolean()) ::
+          {:ok, nil} | {:error, Bunnyx.Error.t()}
+  def set_edge_rule_enabled(client, id, edge_rule_id, enabled) do
+    client = Bunnyx.resolve(client)
+
+    case Bunnyx.HTTP.request(
+           client.req,
+           :post,
+           "/pullzone/#{id}/edgerules/#{edge_rule_id}/setEdgeRuleEnabled",
+           json: %{"Id" => edge_rule_id, "Value" => enabled}
+         ) do
+      {:ok, _} -> {:ok, nil}
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc "Provisions a free Let's Encrypt certificate for a hostname."
+  @spec load_free_certificate(Bunnyx.t() | keyword(), String.t()) ::
+          {:ok, nil} | {:error, Bunnyx.Error.t()}
+  def load_free_certificate(client, hostname) do
+    client = Bunnyx.resolve(client)
+
+    case Bunnyx.HTTP.request(client.req, :get, "/pullzone/loadFreeCertificate",
+           params: %{"hostname" => hostname}
+         ) do
+      {:ok, _} -> {:ok, nil}
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc "Enables or disables forced SSL for a hostname on a pull zone."
+  @spec set_force_ssl(Bunnyx.t() | keyword(), pos_integer(), String.t(), boolean()) ::
+          {:ok, nil} | {:error, Bunnyx.Error.t()}
+  def set_force_ssl(client, id, hostname, force_ssl) do
+    client = Bunnyx.resolve(client)
+
+    case Bunnyx.HTTP.request(client.req, :post, "/pullzone/#{id}/setForceSSL",
+           json: %{"Hostname" => hostname, "ForceSSL" => force_ssl}
+         ) do
+      {:ok, _} -> {:ok, nil}
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc "Uploads a custom SSL certificate for a hostname on a pull zone."
+  @spec add_certificate(Bunnyx.t() | keyword(), pos_integer(), String.t(), String.t(), String.t()) ::
+          {:ok, nil} | {:error, Bunnyx.Error.t()}
+  def add_certificate(client, id, hostname, certificate, certificate_key) do
+    client = Bunnyx.resolve(client)
+
+    case Bunnyx.HTTP.request(client.req, :post, "/pullzone/#{id}/addCertificate",
+           json: %{
+             "Hostname" => hostname,
+             "Certificate" => certificate,
+             "CertificateKey" => certificate_key
+           }
+         ) do
+      {:ok, _} -> {:ok, nil}
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc "Removes an SSL certificate from a hostname on a pull zone."
+  @spec remove_certificate(Bunnyx.t() | keyword(), pos_integer(), String.t()) ::
+          {:ok, nil} | {:error, Bunnyx.Error.t()}
+  def remove_certificate(client, id, hostname) do
+    client = Bunnyx.resolve(client)
+
+    case Bunnyx.HTTP.request(client.req, :delete, "/pullzone/#{id}/removeCertificate",
+           json: %{"Hostname" => hostname}
+         ) do
+      {:ok, _} -> {:ok, nil}
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc "Adds a hostname to the pull zone's allowed referrer list."
+  @spec add_allowed_referrer(Bunnyx.t() | keyword(), pos_integer(), String.t()) ::
+          {:ok, nil} | {:error, Bunnyx.Error.t()}
+  def add_allowed_referrer(client, id, hostname) do
+    client = Bunnyx.resolve(client)
+
+    case Bunnyx.HTTP.request(client.req, :post, "/pullzone/#{id}/addAllowedReferrer",
+           json: %{"Hostname" => hostname}
+         ) do
+      {:ok, _} -> {:ok, nil}
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc "Removes a hostname from the pull zone's allowed referrer list."
+  @spec remove_allowed_referrer(Bunnyx.t() | keyword(), pos_integer(), String.t()) ::
+          {:ok, nil} | {:error, Bunnyx.Error.t()}
+  def remove_allowed_referrer(client, id, hostname) do
+    client = Bunnyx.resolve(client)
+
+    case Bunnyx.HTTP.request(client.req, :post, "/pullzone/#{id}/removeAllowedReferrer",
+           json: %{"Hostname" => hostname}
+         ) do
+      {:ok, _} -> {:ok, nil}
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc "Adds a hostname to the pull zone's blocked referrer list."
+  @spec add_blocked_referrer(Bunnyx.t() | keyword(), pos_integer(), String.t()) ::
+          {:ok, nil} | {:error, Bunnyx.Error.t()}
+  def add_blocked_referrer(client, id, hostname) do
+    client = Bunnyx.resolve(client)
+
+    case Bunnyx.HTTP.request(client.req, :post, "/pullzone/#{id}/addBlockedReferrer",
+           json: %{"Hostname" => hostname}
+         ) do
+      {:ok, _} -> {:ok, nil}
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc "Removes a hostname from the pull zone's blocked referrer list."
+  @spec remove_blocked_referrer(Bunnyx.t() | keyword(), pos_integer(), String.t()) ::
+          {:ok, nil} | {:error, Bunnyx.Error.t()}
+  def remove_blocked_referrer(client, id, hostname) do
+    client = Bunnyx.resolve(client)
+
+    case Bunnyx.HTTP.request(client.req, :post, "/pullzone/#{id}/removeBlockedReferrer",
+           json: %{"Hostname" => hostname}
+         ) do
+      {:ok, _} -> {:ok, nil}
+      {:error, _} = error -> error
+    end
+  end
+
   defp from_response(data) when is_map(data) do
     fields =
       for {pascal, atom} <- @field_mapping, Map.has_key?(data, pascal), into: %{} do

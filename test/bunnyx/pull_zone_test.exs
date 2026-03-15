@@ -360,6 +360,311 @@ defmodule Bunnyx.PullZoneTest do
     end
   end
 
+  describe "add_or_update_edge_rule/3" do
+    test "sends edge rule attrs and returns {:ok, nil}", %{client: client} do
+      triggers = [%{"Type" => 0, "PatternMatchingType" => 0, "PatternMatches" => ["*.jpg"]}]
+
+      expect(Bunnyx.HTTP, :request, fn _req,
+                                       :post,
+                                       "/pullzone/12345/edgerules/addOrUpdate",
+                                       opts ->
+        assert opts[:json] == %{
+                 "ActionType" => 1,
+                 "ActionParameter1" => "https://example.com",
+                 "TriggerMatchingType" => 0,
+                 "Triggers" => triggers,
+                 "Description" => "Redirect rule",
+                 "Enabled" => true
+               }
+
+        {:ok, ""}
+      end)
+
+      assert {:ok, nil} =
+               Bunnyx.PullZone.add_or_update_edge_rule(client, 12_345,
+                 action_type: 1,
+                 action_parameter_1: "https://example.com",
+                 trigger_matching_type: 0,
+                 triggers: triggers,
+                 description: "Redirect rule",
+                 enabled: true
+               )
+    end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 400, message: "Bad request"}
+
+      expect(Bunnyx.HTTP, :request, fn _req,
+                                       :post,
+                                       "/pullzone/12345/edgerules/addOrUpdate",
+                                       _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} =
+               Bunnyx.PullZone.add_or_update_edge_rule(client, 12_345, action_type: 1)
+    end
+  end
+
+  describe "delete_edge_rule/3" do
+    test "returns {:ok, nil}", %{client: client} do
+      expect(Bunnyx.HTTP, :request, fn _req,
+                                       :delete,
+                                       "/pullzone/12345/edgerules/abc-123",
+                                       _opts ->
+        {:ok, ""}
+      end)
+
+      assert {:ok, nil} = Bunnyx.PullZone.delete_edge_rule(client, 12_345, "abc-123")
+    end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 404, message: "Not found"}
+
+      expect(Bunnyx.HTTP, :request, fn _req,
+                                       :delete,
+                                       "/pullzone/12345/edgerules/abc-123",
+                                       _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} = Bunnyx.PullZone.delete_edge_rule(client, 12_345, "abc-123")
+    end
+  end
+
+  describe "set_edge_rule_enabled/4" do
+    test "sends toggle and returns {:ok, nil}", %{client: client} do
+      expect(Bunnyx.HTTP, :request, fn _req,
+                                       :post,
+                                       "/pullzone/12345/edgerules/abc-123/setEdgeRuleEnabled",
+                                       opts ->
+        assert opts[:json] == %{"Id" => "abc-123", "Value" => true}
+        {:ok, ""}
+      end)
+
+      assert {:ok, nil} =
+               Bunnyx.PullZone.set_edge_rule_enabled(client, 12_345, "abc-123", true)
+    end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 500, message: "Server error"}
+
+      expect(Bunnyx.HTTP, :request, fn _req,
+                                       :post,
+                                       "/pullzone/12345/edgerules/abc-123/setEdgeRuleEnabled",
+                                       _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} =
+               Bunnyx.PullZone.set_edge_rule_enabled(client, 12_345, "abc-123", false)
+    end
+  end
+
+  describe "load_free_certificate/2" do
+    test "sends hostname and returns {:ok, nil}", %{client: client} do
+      expect(Bunnyx.HTTP, :request, fn _req, :get, "/pullzone/loadFreeCertificate", opts ->
+        assert opts[:params] == %{"hostname" => "cdn.example.com"}
+        {:ok, ""}
+      end)
+
+      assert {:ok, nil} = Bunnyx.PullZone.load_free_certificate(client, "cdn.example.com")
+    end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 400, message: "Bad request"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :get, "/pullzone/loadFreeCertificate", _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} = Bunnyx.PullZone.load_free_certificate(client, "cdn.example.com")
+    end
+  end
+
+  describe "set_force_ssl/4" do
+    test "sends hostname and flag", %{client: client} do
+      expect(Bunnyx.HTTP, :request, fn _req, :post, "/pullzone/12345/setForceSSL", opts ->
+        assert opts[:json] == %{"Hostname" => "cdn.example.com", "ForceSSL" => true}
+        {:ok, ""}
+      end)
+
+      assert {:ok, nil} =
+               Bunnyx.PullZone.set_force_ssl(client, 12_345, "cdn.example.com", true)
+    end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 400, message: "Bad request"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :post, "/pullzone/12345/setForceSSL", _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} =
+               Bunnyx.PullZone.set_force_ssl(client, 12_345, "cdn.example.com", true)
+    end
+  end
+
+  describe "add_certificate/5" do
+    test "sends certificate data and returns {:ok, nil}", %{client: client} do
+      expect(Bunnyx.HTTP, :request, fn _req, :post, "/pullzone/12345/addCertificate", opts ->
+        assert opts[:json] == %{
+                 "Hostname" => "cdn.example.com",
+                 "Certificate" => "base64cert",
+                 "CertificateKey" => "base64key"
+               }
+
+        {:ok, ""}
+      end)
+
+      assert {:ok, nil} =
+               Bunnyx.PullZone.add_certificate(
+                 client,
+                 12_345,
+                 "cdn.example.com",
+                 "base64cert",
+                 "base64key"
+               )
+    end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 400, message: "Bad request"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :post, "/pullzone/12345/addCertificate", _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} =
+               Bunnyx.PullZone.add_certificate(client, 12_345, "cdn.example.com", "c", "k")
+    end
+  end
+
+  describe "remove_certificate/3" do
+    test "sends hostname and returns {:ok, nil}", %{client: client} do
+      expect(Bunnyx.HTTP, :request, fn _req, :delete, "/pullzone/12345/removeCertificate", opts ->
+        assert opts[:json] == %{"Hostname" => "cdn.example.com"}
+        {:ok, ""}
+      end)
+
+      assert {:ok, nil} =
+               Bunnyx.PullZone.remove_certificate(client, 12_345, "cdn.example.com")
+    end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 400, message: "Bad request"}
+
+      expect(Bunnyx.HTTP, :request, fn _req,
+                                       :delete,
+                                       "/pullzone/12345/removeCertificate",
+                                       _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} =
+               Bunnyx.PullZone.remove_certificate(client, 12_345, "cdn.example.com")
+    end
+  end
+
+  describe "add_allowed_referrer/3" do
+    test "sends hostname and returns {:ok, nil}", %{client: client} do
+      expect(Bunnyx.HTTP, :request, fn _req, :post, "/pullzone/12345/addAllowedReferrer", opts ->
+        assert opts[:json] == %{"Hostname" => "example.com"}
+        {:ok, ""}
+      end)
+
+      assert {:ok, nil} = Bunnyx.PullZone.add_allowed_referrer(client, 12_345, "example.com")
+    end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 400, message: "Bad request"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :post, "/pullzone/12345/addAllowedReferrer", _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} =
+               Bunnyx.PullZone.add_allowed_referrer(client, 12_345, "example.com")
+    end
+  end
+
+  describe "remove_allowed_referrer/3" do
+    test "sends hostname and returns {:ok, nil}", %{client: client} do
+      expect(Bunnyx.HTTP, :request, fn _req,
+                                       :post,
+                                       "/pullzone/12345/removeAllowedReferrer",
+                                       opts ->
+        assert opts[:json] == %{"Hostname" => "example.com"}
+        {:ok, ""}
+      end)
+
+      assert {:ok, nil} = Bunnyx.PullZone.remove_allowed_referrer(client, 12_345, "example.com")
+    end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 400, message: "Bad request"}
+
+      expect(Bunnyx.HTTP, :request, fn _req,
+                                       :post,
+                                       "/pullzone/12345/removeAllowedReferrer",
+                                       _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} =
+               Bunnyx.PullZone.remove_allowed_referrer(client, 12_345, "example.com")
+    end
+  end
+
+  describe "add_blocked_referrer/3" do
+    test "sends hostname and returns {:ok, nil}", %{client: client} do
+      expect(Bunnyx.HTTP, :request, fn _req, :post, "/pullzone/12345/addBlockedReferrer", opts ->
+        assert opts[:json] == %{"Hostname" => "spam.com"}
+        {:ok, ""}
+      end)
+
+      assert {:ok, nil} = Bunnyx.PullZone.add_blocked_referrer(client, 12_345, "spam.com")
+    end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 400, message: "Bad request"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :post, "/pullzone/12345/addBlockedReferrer", _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} =
+               Bunnyx.PullZone.add_blocked_referrer(client, 12_345, "spam.com")
+    end
+  end
+
+  describe "remove_blocked_referrer/3" do
+    test "sends hostname and returns {:ok, nil}", %{client: client} do
+      expect(Bunnyx.HTTP, :request, fn _req,
+                                       :post,
+                                       "/pullzone/12345/removeBlockedReferrer",
+                                       opts ->
+        assert opts[:json] == %{"Hostname" => "spam.com"}
+        {:ok, ""}
+      end)
+
+      assert {:ok, nil} = Bunnyx.PullZone.remove_blocked_referrer(client, 12_345, "spam.com")
+    end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 400, message: "Bad request"}
+
+      expect(Bunnyx.HTTP, :request, fn _req,
+                                       :post,
+                                       "/pullzone/12345/removeBlockedReferrer",
+                                       _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} =
+               Bunnyx.PullZone.remove_blocked_referrer(client, 12_345, "spam.com")
+    end
+  end
+
   describe "resolve" do
     test "accepts keyword list as client" do
       response = Bunnyx.Factory.pull_zone_response()
