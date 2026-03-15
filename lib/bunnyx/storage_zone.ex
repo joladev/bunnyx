@@ -170,6 +170,79 @@ defmodule Bunnyx.StorageZone do
     end
   end
 
+  @doc """
+  Returns storage zone statistics.
+
+  ## Options
+
+    * `:date_from` — start date (ISO 8601 string)
+    * `:date_to` — end date (ISO 8601 string)
+
+  """
+  @spec statistics(Bunnyx.t() | keyword(), pos_integer(), keyword()) ::
+          {:ok, %{storage_used_chart: map(), file_count_chart: map()}}
+          | {:error, Bunnyx.Error.t()}
+  def statistics(client, id, opts \\ []) do
+    client = Bunnyx.resolve(client)
+
+    params =
+      opts
+      |> Keyword.take([:date_from, :date_to])
+      |> to_statistics_params()
+
+    case Bunnyx.HTTP.request(client.req, :get, "/storagezone/#{id}/statistics", params: params) do
+      {:ok, body} ->
+        {:ok,
+         %{
+           storage_used_chart: body["StorageUsedChart"],
+           file_count_chart: body["FileCountChart"]
+         }}
+
+      {:error, _} = error ->
+        error
+    end
+  end
+
+  @doc "Resets the storage zone password."
+  @spec reset_password(Bunnyx.t() | keyword(), pos_integer()) ::
+          {:ok, nil} | {:error, Bunnyx.Error.t()}
+  def reset_password(client, id) do
+    client = Bunnyx.resolve(client)
+
+    case Bunnyx.HTTP.request(client.req, :post, "/storagezone/#{id}/resetPassword", []) do
+      {:ok, _} -> {:ok, nil}
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc "Resets the storage zone read-only password."
+  @spec reset_read_only_password(Bunnyx.t() | keyword(), pos_integer()) ::
+          {:ok, nil} | {:error, Bunnyx.Error.t()}
+  def reset_read_only_password(client, id) do
+    client = Bunnyx.resolve(client)
+
+    case Bunnyx.HTTP.request(client.req, :post, "/storagezone/resetReadOnlyPassword",
+           params: %{"id" => id}
+         ) do
+      {:ok, _} -> {:ok, nil}
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc "Checks if a storage zone name is available."
+  @spec check_availability(Bunnyx.t() | keyword(), String.t()) ::
+          {:ok, boolean()} | {:error, Bunnyx.Error.t()}
+  def check_availability(client, name) do
+    client = Bunnyx.resolve(client)
+
+    case Bunnyx.HTTP.request(client.req, :post, "/storagezone/checkavailability",
+           json: %{"Name" => name}
+         ) do
+      {:ok, body} -> {:ok, body["Available"]}
+      {:error, _} = error -> error
+    end
+  end
+
   defp from_response(data) when is_map(data) do
     fields =
       for {pascal, atom} <- @field_mapping, Map.has_key?(data, pascal), into: %{} do
@@ -183,6 +256,14 @@ defmodule Bunnyx.StorageZone do
     Map.new(attrs, fn {key, value} ->
       pascal = Map.fetch!(@reverse_mapping, key)
       {pascal, value}
+    end)
+  end
+
+  defp to_statistics_params(opts) do
+    mapping = %{date_from: "dateFrom", date_to: "dateTo"}
+
+    Map.new(opts, fn {key, value} ->
+      {Map.fetch!(mapping, key), value}
     end)
   end
 
