@@ -210,6 +210,32 @@ defmodule Bunnyx.PullZone do
     end
   end
 
+  @doc "Resets the token authentication security key for a pull zone."
+  @spec reset_security_key(Bunnyx.t() | keyword(), pos_integer()) ::
+          {:ok, nil} | {:error, Bunnyx.Error.t()}
+  def reset_security_key(client, id) do
+    client = Bunnyx.resolve(client)
+
+    case Bunnyx.HTTP.request(client.req, :post, "/pullzone/#{id}/resetSecurityKey", []) do
+      {:ok, _} -> {:ok, nil}
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc "Checks if a pull zone name is available."
+  @spec check_availability(Bunnyx.t() | keyword(), String.t()) ::
+          {:ok, nil} | {:error, Bunnyx.Error.t()}
+  def check_availability(client, name) do
+    client = Bunnyx.resolve(client)
+
+    case Bunnyx.HTTP.request(client.req, :post, "/pullzone/checkavailability",
+           json: %{"Name" => name}
+         ) do
+      {:ok, _} -> {:ok, nil}
+      {:error, _} = error -> error
+    end
+  end
+
   defp from_response(data) when is_map(data) do
     fields =
       for {pascal, atom} <- @field_mapping, Map.has_key?(data, pascal), into: %{} do

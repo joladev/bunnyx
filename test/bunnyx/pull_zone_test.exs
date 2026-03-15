@@ -191,6 +191,47 @@ defmodule Bunnyx.PullZoneTest do
     end
   end
 
+  describe "reset_security_key/2" do
+    test "returns {:ok, nil}", %{client: client} do
+      expect(Bunnyx.HTTP, :request, fn _req, :post, "/pullzone/12345/resetSecurityKey", _opts ->
+        {:ok, ""}
+      end)
+
+      assert {:ok, nil} = Bunnyx.PullZone.reset_security_key(client, 12_345)
+    end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 500, message: "Server error"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :post, "/pullzone/12345/resetSecurityKey", _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} = Bunnyx.PullZone.reset_security_key(client, 12_345)
+    end
+  end
+
+  describe "check_availability/2" do
+    test "returns {:ok, nil} when available", %{client: client} do
+      expect(Bunnyx.HTTP, :request, fn _req, :post, "/pullzone/checkavailability", opts ->
+        assert opts[:json] == %{"Name" => "my-zone"}
+        {:ok, ""}
+      end)
+
+      assert {:ok, nil} = Bunnyx.PullZone.check_availability(client, "my-zone")
+    end
+
+    test "returns error when unavailable", %{client: client} do
+      error = %Bunnyx.Error{status: 400, message: "Name already taken"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :post, "/pullzone/checkavailability", _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} = Bunnyx.PullZone.check_availability(client, "taken-zone")
+    end
+  end
+
   describe "resolve" do
     test "accepts keyword list as client" do
       response = Bunnyx.Factory.pull_zone_response()
