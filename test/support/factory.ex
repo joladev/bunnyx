@@ -175,6 +175,48 @@ defmodule Bunnyx.Factory do
     )
   end
 
+  def video_response(overrides \\ %{}) do
+    Map.merge(
+      %{
+        "guid" => "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+        "title" => "My Video",
+        "description" => "A test video",
+        "videoLibraryId" => 90_001,
+        "dateUploaded" => "2025-06-01T12:00:00Z",
+        "views" => 1000,
+        "isPublic" => true,
+        "length" => 120,
+        "status" => 4,
+        "framerate" => 30.0,
+        "width" => 1920,
+        "height" => 1080,
+        "availableResolutions" => "240p,360p,480p,720p,1080p",
+        "encodeProgress" => 100,
+        "storageSize" => 52_428_800,
+        "hasMP4Fallback" => true,
+        "collectionId" => "",
+        "thumbnailFileName" => "thumbnail.jpg",
+        "averageWatchTime" => 90,
+        "totalWatchTime" => 90_000,
+        "category" => "other",
+        "hasOriginal" => true
+      },
+      overrides
+    )
+  end
+
+  def video_list_response(overrides \\ %{}) do
+    Map.merge(
+      %{
+        "items" => [video_response()],
+        "currentPage" => 1,
+        "totalItems" => 1,
+        "itemsPerPage" => 100
+      },
+      overrides
+    )
+  end
+
   def dns_zone_list_response(overrides \\ %{}) do
     Map.merge(
       %{
