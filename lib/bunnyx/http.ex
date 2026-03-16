@@ -5,7 +5,7 @@ defmodule Bunnyx.HTTP do
   extending Bunnyx with unsupported endpoints.
   """
 
-  @type method :: :get | :post | :put | :delete
+  @type method :: :get | :head | :post | :put | :delete
 
   @doc "Performs an HTTP request against the bunny.net API."
   @spec request(Req.Request.t(), method(), String.t(), keyword()) ::
@@ -14,8 +14,8 @@ defmodule Bunnyx.HTTP do
     req_opts = [{:method, method}, {:url, path} | opts]
 
     case Req.request(req, req_opts) do
-      {:ok, %Req.Response{status: status, body: body}} when status in 200..299 ->
-        {:ok, body}
+      {:ok, %Req.Response{status: status} = response} when status in 200..299 ->
+        if method == :head, do: {:ok, response.headers}, else: {:ok, response.body}
 
       {:ok, %Req.Response{status: status, body: body}} ->
         {:error,
