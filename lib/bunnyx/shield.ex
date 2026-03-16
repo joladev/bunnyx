@@ -331,6 +331,235 @@ defmodule Bunnyx.Shield do
     end
   end
 
+  # -- Rate Limiting --
+
+  @rate_limit_mapping %{
+    shield_zone_id: "shieldZoneId",
+    rule_name: "ruleName",
+    rule_description: "ruleDescription",
+    rule_configuration: "ruleConfiguration"
+  }
+
+  @doc "Lists rate limits for a Shield zone."
+  @spec list_rate_limits(Bunnyx.t() | keyword(), pos_integer()) ::
+          {:ok, %{items: [map()], page: map()}} | {:error, Bunnyx.Error.t()}
+  def list_rate_limits(client, shield_zone_id) do
+    client = Bunnyx.resolve(client)
+
+    case Bunnyx.HTTP.request(client.req, :get, "/shield/rate-limits/#{shield_zone_id}", []) do
+      {:ok, body} -> {:ok, %{items: Map.get(body, "data", []), page: body["page"]}}
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc "Gets an individual rate limit."
+  @spec get_rate_limit(Bunnyx.t() | keyword(), pos_integer(), pos_integer()) ::
+          {:ok, map()} | {:error, Bunnyx.Error.t()}
+  def get_rate_limit(client, shield_zone_id, rate_limit_id) do
+    client = Bunnyx.resolve(client)
+
+    case Bunnyx.HTTP.request(
+           client.req,
+           :get,
+           "/shield/rate-limit/#{shield_zone_id}/#{rate_limit_id}",
+           []
+         ) do
+      {:ok, body} -> {:ok, unwrap_raw_data(body)}
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc "Creates a rate limit for a Shield zone."
+  @spec create_rate_limit(Bunnyx.t() | keyword(), keyword()) ::
+          {:ok, map()} | {:error, Bunnyx.Error.t()}
+  def create_rate_limit(client, attrs) do
+    client = Bunnyx.resolve(client)
+
+    json =
+      Map.new(attrs, fn {key, value} ->
+        {Map.fetch!(@rate_limit_mapping, key), value}
+      end)
+
+    case Bunnyx.HTTP.request(client.req, :post, "/shield/rate-limit", json: json) do
+      {:ok, body} -> {:ok, unwrap_raw_data(body)}
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc "Updates a rate limit."
+  @spec update_rate_limit(Bunnyx.t() | keyword(), pos_integer(), keyword()) ::
+          {:ok, map()} | {:error, Bunnyx.Error.t()}
+  def update_rate_limit(client, rate_limit_id, attrs) do
+    client = Bunnyx.resolve(client)
+
+    json =
+      Map.new(attrs, fn {key, value} ->
+        {Map.fetch!(@rate_limit_mapping, key), value}
+      end)
+
+    case Bunnyx.HTTP.request(client.req, :patch, "/shield/rate-limit/#{rate_limit_id}",
+           json: json
+         ) do
+      {:ok, body} -> {:ok, unwrap_raw_data(body)}
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc "Deletes a rate limit."
+  @spec delete_rate_limit(Bunnyx.t() | keyword(), pos_integer()) ::
+          {:ok, nil} | {:error, Bunnyx.Error.t()}
+  def delete_rate_limit(client, rate_limit_id) do
+    client = Bunnyx.resolve(client)
+
+    case Bunnyx.HTTP.request(client.req, :delete, "/shield/rate-limit/#{rate_limit_id}", []) do
+      {:ok, _} -> {:ok, nil}
+      {:error, _} = error -> error
+    end
+  end
+
+  # -- Access Lists --
+
+  @doc "Lists all access lists for a Shield zone."
+  @spec list_access_lists(Bunnyx.t() | keyword(), pos_integer()) ::
+          {:ok, map()} | {:error, Bunnyx.Error.t()}
+  def list_access_lists(client, shield_zone_id) do
+    client = Bunnyx.resolve(client)
+
+    case Bunnyx.HTTP.request(
+           client.req,
+           :get,
+           "/shield/shield-zone/#{shield_zone_id}/access-lists",
+           []
+         ) do
+      {:ok, body} -> {:ok, unwrap_raw_data(body)}
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc "Gets a specific custom access list."
+  @spec get_access_list(Bunnyx.t() | keyword(), pos_integer(), pos_integer()) ::
+          {:ok, map()} | {:error, Bunnyx.Error.t()}
+  def get_access_list(client, shield_zone_id, access_list_id) do
+    client = Bunnyx.resolve(client)
+
+    case Bunnyx.HTTP.request(
+           client.req,
+           :get,
+           "/shield/shield-zone/#{shield_zone_id}/access-lists/#{access_list_id}",
+           []
+         ) do
+      {:ok, body} -> {:ok, unwrap_raw_data(body)}
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc """
+  Creates a custom access list.
+
+  ## Attributes
+
+    * `:name` (required) — display name
+    * `:type` (required) — access list type (integer enum)
+    * `:content` (required) — entries separated by newlines
+    * `:description` — optional description
+    * `:checksum` — SHA-256 checksum for integrity
+
+  """
+  @spec create_access_list(Bunnyx.t() | keyword(), pos_integer(), keyword()) ::
+          {:ok, map()} | {:error, Bunnyx.Error.t()}
+  def create_access_list(client, shield_zone_id, attrs) do
+    client = Bunnyx.resolve(client)
+
+    json = to_access_list_body(attrs)
+
+    case Bunnyx.HTTP.request(
+           client.req,
+           :post,
+           "/shield/shield-zone/#{shield_zone_id}/access-lists",
+           json: json
+         ) do
+      {:ok, body} -> {:ok, unwrap_raw_data(body)}
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc "Updates a custom access list."
+  @spec update_access_list(Bunnyx.t() | keyword(), pos_integer(), pos_integer(), keyword()) ::
+          {:ok, map()} | {:error, Bunnyx.Error.t()}
+  def update_access_list(client, shield_zone_id, access_list_id, attrs) do
+    client = Bunnyx.resolve(client)
+
+    json = to_access_list_body(attrs)
+
+    case Bunnyx.HTTP.request(
+           client.req,
+           :put,
+           "/shield/shield-zone/#{shield_zone_id}/access-lists/#{access_list_id}",
+           json: json
+         ) do
+      {:ok, body} -> {:ok, unwrap_raw_data(body)}
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc "Deletes a custom access list."
+  @spec delete_access_list(Bunnyx.t() | keyword(), pos_integer(), pos_integer()) ::
+          {:ok, nil} | {:error, Bunnyx.Error.t()}
+  def delete_access_list(client, shield_zone_id, access_list_id) do
+    client = Bunnyx.resolve(client)
+
+    case Bunnyx.HTTP.request(
+           client.req,
+           :delete,
+           "/shield/shield-zone/#{shield_zone_id}/access-lists/#{access_list_id}",
+           []
+         ) do
+      {:ok, _} -> {:ok, nil}
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc "Updates access list configuration (enable/disable and action)."
+  @spec update_access_list_config(
+          Bunnyx.t() | keyword(),
+          pos_integer(),
+          pos_integer(),
+          keyword()
+        ) ::
+          {:ok, map()} | {:error, Bunnyx.Error.t()}
+  def update_access_list_config(client, shield_zone_id, config_id, attrs) do
+    client = Bunnyx.resolve(client)
+
+    json = to_access_list_config_body(attrs)
+
+    case Bunnyx.HTTP.request(
+           client.req,
+           :patch,
+           "/shield/shield-zone/#{shield_zone_id}/access-lists/configurations/#{config_id}",
+           json: json
+         ) do
+      {:ok, body} -> {:ok, unwrap_raw_data(body)}
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc "Lists access list enum types and their values."
+  @spec list_access_list_enums(Bunnyx.t() | keyword(), pos_integer()) ::
+          {:ok, map()} | {:error, Bunnyx.Error.t()}
+  def list_access_list_enums(client, shield_zone_id) do
+    client = Bunnyx.resolve(client)
+
+    case Bunnyx.HTTP.request(
+           client.req,
+           :get,
+           "/shield/shield-zone/#{shield_zone_id}/access-lists/enums",
+           []
+         ) do
+      {:ok, body} -> {:ok, body}
+      {:error, _} = error -> error
+    end
+  end
+
   defp unwrap_data(%{"data" => data}) when is_map(data), do: Zone.from_response(data)
   defp unwrap_data(body) when is_map(body), do: Zone.from_response(body)
 
@@ -349,6 +578,28 @@ defmodule Bunnyx.Shield do
   defp to_waf_body(attrs) do
     Map.new(attrs, fn {key, value} ->
       {Map.fetch!(@waf_rule_mapping, key), value}
+    end)
+  end
+
+  @access_list_mapping %{
+    name: "name",
+    type: "type",
+    content: "content",
+    description: "description",
+    checksum: "checksum"
+  }
+
+  defp to_access_list_body(attrs) do
+    Map.new(attrs, fn {key, value} ->
+      {Map.fetch!(@access_list_mapping, key), value}
+    end)
+  end
+
+  @access_list_config_mapping %{is_enabled: "isEnabled", action: "action"}
+
+  defp to_access_list_config_body(attrs) do
+    Map.new(attrs, fn {key, value} ->
+      {Map.fetch!(@access_list_config_mapping, key), value}
     end)
   end
 

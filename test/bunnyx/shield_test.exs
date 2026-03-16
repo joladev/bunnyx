@@ -321,4 +321,196 @@ defmodule Bunnyx.ShieldTest do
       assert {:ok, ^response} = Bunnyx.Shield.list_waf_enums(client)
     end
   end
+
+  # -- Rate Limiting --
+
+  describe "list_rate_limits/2" do
+    test "returns rate limits", %{client: client} do
+      response = %{"data" => [%{"id" => 1}], "page" => %{"totalCount" => 1}}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :get, "/shield/rate-limits/100001", _opts ->
+        {:ok, response}
+      end)
+
+      assert {:ok, result} = Bunnyx.Shield.list_rate_limits(client, 100_001)
+      assert [%{"id" => 1}] = result.items
+    end
+  end
+
+  describe "get_rate_limit/3" do
+    test "returns a rate limit", %{client: client} do
+      response = %{"data" => %{"id" => 1, "ruleName" => "API limit"}}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :get, "/shield/rate-limit/100001/1", _opts ->
+        {:ok, response}
+      end)
+
+      assert {:ok, %{"id" => 1}} = Bunnyx.Shield.get_rate_limit(client, 100_001, 1)
+    end
+  end
+
+  describe "create_rate_limit/2" do
+    test "sends rate limit config", %{client: client} do
+      response = %{"data" => %{"id" => 1}}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :post, "/shield/rate-limit", opts ->
+        assert opts[:json]["shieldZoneId"] == 100_001
+        assert opts[:json]["ruleName"] == "API limit"
+        {:ok, response}
+      end)
+
+      assert {:ok, %{"id" => 1}} =
+               Bunnyx.Shield.create_rate_limit(client,
+                 shield_zone_id: 100_001,
+                 rule_name: "API limit",
+                 rule_configuration: %{}
+               )
+    end
+  end
+
+  describe "update_rate_limit/3" do
+    test "sends updated attrs", %{client: client} do
+      response = %{"data" => %{"id" => 1}}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :patch, "/shield/rate-limit/1", opts ->
+        assert opts[:json]["ruleName"] == "Updated"
+        {:ok, response}
+      end)
+
+      assert {:ok, _} = Bunnyx.Shield.update_rate_limit(client, 1, rule_name: "Updated")
+    end
+  end
+
+  describe "delete_rate_limit/2" do
+    test "returns {:ok, nil}", %{client: client} do
+      expect(Bunnyx.HTTP, :request, fn _req, :delete, "/shield/rate-limit/1", _opts ->
+        {:ok, ""}
+      end)
+
+      assert {:ok, nil} = Bunnyx.Shield.delete_rate_limit(client, 1)
+    end
+  end
+
+  # -- Access Lists --
+
+  describe "list_access_lists/2" do
+    test "returns access lists", %{client: client} do
+      response = %{"data" => [%{"id" => 1, "name" => "Block list"}]}
+
+      expect(Bunnyx.HTTP, :request, fn _req,
+                                       :get,
+                                       "/shield/shield-zone/100001/access-lists",
+                                       _opts ->
+        {:ok, response}
+      end)
+
+      assert {:ok, [%{"id" => 1}]} = Bunnyx.Shield.list_access_lists(client, 100_001)
+    end
+  end
+
+  describe "get_access_list/3" do
+    test "returns an access list", %{client: client} do
+      response = %{"data" => %{"id" => 1, "name" => "Block list"}}
+
+      expect(Bunnyx.HTTP, :request, fn _req,
+                                       :get,
+                                       "/shield/shield-zone/100001/access-lists/1",
+                                       _opts ->
+        {:ok, response}
+      end)
+
+      assert {:ok, %{"id" => 1}} = Bunnyx.Shield.get_access_list(client, 100_001, 1)
+    end
+  end
+
+  describe "create_access_list/3" do
+    test "sends access list attrs", %{client: client} do
+      response = %{"data" => %{"id" => 1}}
+
+      expect(Bunnyx.HTTP, :request, fn _req,
+                                       :post,
+                                       "/shield/shield-zone/100001/access-lists",
+                                       opts ->
+        assert opts[:json]["name"] == "Block IPs"
+        assert opts[:json]["type"] == 0
+        assert opts[:json]["content"] == "1.2.3.4\n5.6.7.8"
+        {:ok, response}
+      end)
+
+      assert {:ok, %{"id" => 1}} =
+               Bunnyx.Shield.create_access_list(client, 100_001,
+                 name: "Block IPs",
+                 type: 0,
+                 content: "1.2.3.4\n5.6.7.8"
+               )
+    end
+  end
+
+  describe "update_access_list/4" do
+    test "sends updated attrs", %{client: client} do
+      response = %{"data" => %{"id" => 1}}
+
+      expect(Bunnyx.HTTP, :request, fn _req,
+                                       :put,
+                                       "/shield/shield-zone/100001/access-lists/1",
+                                       opts ->
+        assert opts[:json]["content"] == "1.2.3.4"
+        {:ok, response}
+      end)
+
+      assert {:ok, _} =
+               Bunnyx.Shield.update_access_list(client, 100_001, 1,
+                 name: "Updated",
+                 content: "1.2.3.4"
+               )
+    end
+  end
+
+  describe "delete_access_list/3" do
+    test "returns {:ok, nil}", %{client: client} do
+      expect(Bunnyx.HTTP, :request, fn _req,
+                                       :delete,
+                                       "/shield/shield-zone/100001/access-lists/1",
+                                       _opts ->
+        {:ok, ""}
+      end)
+
+      assert {:ok, nil} = Bunnyx.Shield.delete_access_list(client, 100_001, 1)
+    end
+  end
+
+  describe "update_access_list_config/4" do
+    test "sends config update", %{client: client} do
+      response = %{"data" => %{"id" => 1}}
+
+      expect(Bunnyx.HTTP, :request, fn _req,
+                                       :patch,
+                                       "/shield/shield-zone/100001/access-lists/configurations/1",
+                                       opts ->
+        assert opts[:json] == %{"isEnabled" => true, "action" => 1}
+        {:ok, response}
+      end)
+
+      assert {:ok, _} =
+               Bunnyx.Shield.update_access_list_config(client, 100_001, 1,
+                 is_enabled: true,
+                 action: 1
+               )
+    end
+  end
+
+  describe "list_access_list_enums/2" do
+    test "returns enum types", %{client: client} do
+      response = %{"accessListTypes" => %{}}
+
+      expect(Bunnyx.HTTP, :request, fn _req,
+                                       :get,
+                                       "/shield/shield-zone/100001/access-lists/enums",
+                                       _opts ->
+        {:ok, response}
+      end)
+
+      assert {:ok, ^response} = Bunnyx.Shield.list_access_list_enums(client, 100_001)
+    end
+  end
 end
