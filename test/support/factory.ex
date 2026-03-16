@@ -244,6 +244,57 @@ defmodule Bunnyx.Factory do
     )
   end
 
+  def shield_zone_response(overrides \\ %{}) do
+    Map.merge(
+      %{
+        "shieldZoneId" => 100_001,
+        "pullZoneId" => 12_345,
+        "planType" => 0,
+        "learningMode" => false,
+        "wafEnabled" => true,
+        "wafExecutionMode" => 0,
+        "wafProfileId" => 1,
+        "wafDisabledRules" => [],
+        "wafLogOnlyRules" => [],
+        "wafRequestHeaderLoggingEnabled" => false,
+        "wafRealtimeThreatIntelligenceEnabled" => true,
+        "rateLimitRulesLimit" => 5,
+        "customWafRulesLimit" => 10,
+        "dDoSShieldSensitivity" => 2,
+        "dDoSExecutionMode" => 0,
+        "dDoSChallengeWindow" => 30,
+        "blockVpn" => false,
+        "blockTor" => false,
+        "blockDatacentre" => false,
+        "whitelabelResponsePages" => false
+      },
+      overrides
+    )
+  end
+
+  def shield_zone_wrapped_response(overrides \\ %{}) do
+    %{
+      "data" => shield_zone_response(overrides),
+      "error" => nil
+    }
+  end
+
+  def shield_zone_list_response(overrides \\ %{}) do
+    Map.merge(
+      %{
+        "data" => [shield_zone_response()],
+        "page" => %{
+          "totalCount" => 1,
+          "totalPages" => 1,
+          "currentPage" => 1,
+          "nextPage" => nil,
+          "pageSize" => 20
+        }
+      },
+      overrides
+    )
+  end
+
   def dns_zone_list_response(overrides \\ %{}) do
     Map.merge(
       %{

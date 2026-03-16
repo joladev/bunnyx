@@ -5,7 +5,7 @@ defmodule Bunnyx.HTTP do
   extending Bunnyx with unsupported endpoints.
   """
 
-  @type method :: :get | :head | :post | :put | :delete
+  @type method :: :get | :head | :post | :put | :patch | :delete
 
   @doc """
   Performs an HTTP request against the bunny.net API.
