@@ -141,4 +141,184 @@ defmodule Bunnyx.ShieldTest do
       assert {:error, ^error} = Bunnyx.Shield.update(client, 100_001, waf_enabled: true)
     end
   end
+
+  # -- WAF --
+
+  describe "list_waf_rules/2" do
+    test "returns WAF rules", %{client: client} do
+      response = [%{"name" => "OWASP", "ruleGroups" => []}]
+
+      expect(Bunnyx.HTTP, :request, fn _req, :get, "/shield/waf/rules/100001", _opts ->
+        {:ok, response}
+      end)
+
+      assert {:ok, ^response} = Bunnyx.Shield.list_waf_rules(client, 100_001)
+    end
+  end
+
+  describe "list_custom_waf_rules/2" do
+    test "returns custom rules with pagination", %{client: client} do
+      response = %{
+        "data" => [%{"id" => 1, "ruleName" => "Block SQL injection"}],
+        "page" => %{"totalCount" => 1}
+      }
+
+      expect(Bunnyx.HTTP, :request, fn _req, :get, "/shield/waf/custom-rules/100001", _opts ->
+        {:ok, response}
+      end)
+
+      assert {:ok, result} = Bunnyx.Shield.list_custom_waf_rules(client, 100_001)
+      assert [%{"id" => 1}] = result.items
+    end
+  end
+
+  describe "create_custom_waf_rule/2" do
+    test "sends rule and returns created rule", %{client: client} do
+      response = %{"data" => %{"id" => 1, "ruleName" => "My Rule"}}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :post, "/shield/waf/custom-rule", opts ->
+        assert opts[:json]["shieldZoneId"] == 100_001
+        assert opts[:json]["ruleName"] == "My Rule"
+        {:ok, response}
+      end)
+
+      assert {:ok, %{"id" => 1}} =
+               Bunnyx.Shield.create_custom_waf_rule(client,
+                 shield_zone_id: 100_001,
+                 rule_name: "My Rule"
+               )
+    end
+  end
+
+  describe "get_custom_waf_rule/2" do
+    test "returns a custom rule", %{client: client} do
+      response = %{"data" => %{"id" => 1, "ruleName" => "My Rule"}}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :get, "/shield/waf/custom-rule/1", _opts ->
+        {:ok, response}
+      end)
+
+      assert {:ok, %{"id" => 1}} = Bunnyx.Shield.get_custom_waf_rule(client, 1)
+    end
+  end
+
+  describe "update_custom_waf_rule/3" do
+    test "sends updated attrs", %{client: client} do
+      response = %{"data" => %{"id" => 1, "ruleName" => "Updated"}}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :patch, "/shield/waf/custom-rule/1", opts ->
+        assert opts[:json]["ruleName"] == "Updated"
+        {:ok, response}
+      end)
+
+      assert {:ok, %{"id" => 1}} =
+               Bunnyx.Shield.update_custom_waf_rule(client, 1, rule_name: "Updated")
+    end
+  end
+
+  describe "delete_custom_waf_rule/2" do
+    test "returns {:ok, nil}", %{client: client} do
+      expect(Bunnyx.HTTP, :request, fn _req, :delete, "/shield/waf/custom-rule/1", _opts ->
+        {:ok, ""}
+      end)
+
+      assert {:ok, nil} = Bunnyx.Shield.delete_custom_waf_rule(client, 1)
+    end
+  end
+
+  describe "list_waf_profiles/1" do
+    test "returns profiles", %{client: client} do
+      response = %{"data" => [%{"id" => 1, "name" => "Standard"}]}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :get, "/shield/waf/profiles", _opts ->
+        {:ok, response}
+      end)
+
+      assert {:ok, [%{"id" => 1}]} = Bunnyx.Shield.list_waf_profiles(client)
+    end
+  end
+
+  describe "get_default_waf_config/1" do
+    test "returns default config", %{client: client} do
+      response = %{"data" => %{"variables" => []}}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :get, "/shield/waf/engine-config/default", _opts ->
+        {:ok, response}
+      end)
+
+      assert {:ok, %{"variables" => []}} = Bunnyx.Shield.get_default_waf_config(client)
+    end
+  end
+
+  describe "list_waf_rules_by_plan/1" do
+    test "returns rules by plan", %{client: client} do
+      response = [%{"plan" => "basic", "rules" => []}]
+
+      expect(Bunnyx.HTTP, :request, fn _req, :get, "/shield/waf/rules/plan", _opts ->
+        {:ok, response}
+      end)
+
+      assert {:ok, ^response} = Bunnyx.Shield.list_waf_rules_by_plan(client)
+    end
+  end
+
+  describe "list_triggered_waf_rules/2" do
+    test "returns triggered rules", %{client: client} do
+      response = %{"triggeredRules" => [], "totalTriggeredRules" => 0}
+
+      expect(Bunnyx.HTTP, :request, fn _req,
+                                       :get,
+                                       "/shield/waf/rules/review-triggered/100001",
+                                       _opts ->
+        {:ok, response}
+      end)
+
+      assert {:ok, ^response} = Bunnyx.Shield.list_triggered_waf_rules(client, 100_001)
+    end
+  end
+
+  describe "update_triggered_waf_rule/4" do
+    test "sends rule action update", %{client: client} do
+      response = %{"success" => true}
+
+      expect(Bunnyx.HTTP, :request, fn _req,
+                                       :post,
+                                       "/shield/waf/rules/review-triggered/100001",
+                                       opts ->
+        assert opts[:json] == %{"ruleId" => "rule-1", "action" => 1}
+        {:ok, response}
+      end)
+
+      assert {:ok, _} =
+               Bunnyx.Shield.update_triggered_waf_rule(client, 100_001, "rule-1", 1)
+    end
+  end
+
+  describe "get_waf_ai_recommendation/3" do
+    test "returns AI recommendation", %{client: client} do
+      response = %{"recommendation" => "block"}
+
+      expect(Bunnyx.HTTP, :request, fn _req,
+                                       :get,
+                                       "/shield/waf/rules/review-triggered/ai-recommendation/100001/rule-1",
+                                       _opts ->
+        {:ok, response}
+      end)
+
+      assert {:ok, ^response} =
+               Bunnyx.Shield.get_waf_ai_recommendation(client, 100_001, "rule-1")
+    end
+  end
+
+  describe "list_waf_enums/1" do
+    test "returns enum mappings", %{client: client} do
+      response = %{"actionTypes" => %{}}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :get, "/shield/waf/enums", _opts ->
+        {:ok, response}
+      end)
+
+      assert {:ok, ^response} = Bunnyx.Shield.list_waf_enums(client)
+    end
+  end
 end
