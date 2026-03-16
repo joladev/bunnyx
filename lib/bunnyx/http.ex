@@ -7,15 +7,25 @@ defmodule Bunnyx.HTTP do
 
   @type method :: :get | :head | :post | :put | :delete
 
-  @doc "Performs an HTTP request against the bunny.net API."
+  @doc """
+  Performs an HTTP request against the bunny.net API.
+
+  Pass `return_headers: true` in opts to receive `{:ok, {body, headers}}`
+  instead of `{:ok, body}`. HEAD requests always return headers only.
+  """
   @spec request(Req.Request.t(), method(), String.t(), keyword()) ::
           {:ok, term()} | {:error, Bunnyx.Error.t()}
   def request(req, method, path, opts \\ []) do
-    req_opts = [{:method, method}, {:url, path} | opts]
+    {return_headers, req_opts} = Keyword.pop(opts, :return_headers, false)
+    req_opts = [{:method, method}, {:url, path} | req_opts]
 
     case Req.request(req, req_opts) do
       {:ok, %Req.Response{status: status} = response} when status in 200..299 ->
-        if method == :head, do: {:ok, response.headers}, else: {:ok, response.body}
+        cond do
+          method == :head -> {:ok, response.headers}
+          return_headers -> {:ok, {response.body, response.headers}}
+          true -> {:ok, response.body}
+        end
 
       {:ok, %Req.Response{status: status, body: body}} ->
         {:error,

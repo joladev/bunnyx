@@ -172,6 +172,110 @@ defmodule Bunnyx.S3 do
     end
   end
 
+  # -- Multipart uploads --
+
+  @doc "Creates a multipart upload and returns the upload ID."
+  @spec create_multipart_upload(t() | keyword(), String.t()) ::
+          {:ok, String.t()} | {:error, Bunnyx.Error.t()}
+  def create_multipart_upload(client, key) do
+    client = resolve(client)
+
+    case Bunnyx.HTTP.request(client.req, :post, "/#{client.zone}/#{key}",
+           params: %{"uploads" => ""}
+         ) do
+      {:ok, body} ->
+        %{upload_id: upload_id} = XML.parse_initiate_multipart(body)
+        {:ok, upload_id}
+
+      {:error, _} = error ->
+        error
+    end
+  end
+
+  @doc """
+  Uploads a part for a multipart upload. Returns the ETag needed to complete the upload.
+  """
+  @spec upload_part(t() | keyword(), String.t(), String.t(), pos_integer(), binary()) ::
+          {:ok, String.t()} | {:error, Bunnyx.Error.t()}
+  def upload_part(client, key, upload_id, part_number, data) do
+    client = resolve(client)
+
+    case Bunnyx.HTTP.request(client.req, :put, "/#{client.zone}/#{key}",
+           params: %{"partNumber" => part_number, "uploadId" => upload_id},
+           body: data,
+           return_headers: true
+         ) do
+      {:ok, {_body, headers}} ->
+        [etag] = Map.fetch!(headers, "etag")
+        {:ok, etag}
+
+      {:error, _} = error ->
+        error
+    end
+  end
+
+  @doc """
+  Completes a multipart upload.
+
+  `parts` is a list of `%{part_number: integer, etag: string}` maps.
+  """
+  @spec complete_multipart_upload(t() | keyword(), String.t(), String.t(), [map()]) ::
+          {:ok, %{etag: String.t() | nil, key: String.t() | nil}}
+          | {:error, Bunnyx.Error.t()}
+  def complete_multipart_upload(client, key, upload_id, parts) do
+    client = resolve(client)
+
+    case Bunnyx.HTTP.request(client.req, :post, "/#{client.zone}/#{key}",
+           params: %{"uploadId" => upload_id},
+           body: XML.build_complete_body(parts)
+         ) do
+      {:ok, body} -> {:ok, XML.parse_complete_multipart(body)}
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc "Aborts a multipart upload."
+  @spec abort_multipart_upload(t() | keyword(), String.t(), String.t()) ::
+          {:ok, nil} | {:error, Bunnyx.Error.t()}
+  def abort_multipart_upload(client, key, upload_id) do
+    client = resolve(client)
+
+    case Bunnyx.HTTP.request(client.req, :delete, "/#{client.zone}/#{key}",
+           params: %{"uploadId" => upload_id}
+         ) do
+      {:ok, _} -> {:ok, nil}
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc "Lists parts uploaded for a multipart upload."
+  @spec list_parts(t() | keyword(), String.t(), String.t()) ::
+          {:ok, %{parts: [map()], is_truncated: boolean()}}
+          | {:error, Bunnyx.Error.t()}
+  def list_parts(client, key, upload_id) do
+    client = resolve(client)
+
+    case Bunnyx.HTTP.request(client.req, :get, "/#{client.zone}/#{key}",
+           params: %{"uploadId" => upload_id}
+         ) do
+      {:ok, body} -> {:ok, XML.parse_list_parts(body)}
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc "Lists in-progress multipart uploads for the bucket."
+  @spec list_multipart_uploads(t() | keyword()) ::
+          {:ok, %{uploads: [map()], is_truncated: boolean()}}
+          | {:error, Bunnyx.Error.t()}
+  def list_multipart_uploads(client) do
+    client = resolve(client)
+
+    case Bunnyx.HTTP.request(client.req, :get, "/#{client.zone}", params: %{"uploads" => ""}) do
+      {:ok, body} -> {:ok, XML.parse_list_multipart_uploads(body)}
+      {:error, _} = error -> error
+    end
+  end
+
   defp to_list_params(opts) do
     mapping = %{
       prefix: "prefix",

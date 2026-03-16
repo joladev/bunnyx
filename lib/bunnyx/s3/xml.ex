@@ -29,6 +29,74 @@ defmodule Bunnyx.S3.XML do
     }
   end
 
+  def parse_initiate_multipart(xml) when is_binary(xml) do
+    doc = parse(xml)
+    %{upload_id: xpath_text(doc, ~c"//UploadId")}
+  end
+
+  def parse_list_parts(xml) when is_binary(xml) do
+    doc = parse(xml)
+
+    %{
+      parts:
+        doc
+        |> xpath_all(~c"//Part")
+        |> Enum.map(&parse_part/1),
+      is_truncated: xpath_text(doc, ~c"//IsTruncated") == "true"
+    }
+  end
+
+  def parse_complete_multipart(xml) when is_binary(xml) do
+    doc = parse(xml)
+
+    %{
+      etag: xpath_text(doc, ~c"//ETag"),
+      key: xpath_text(doc, ~c"//Key")
+    }
+  end
+
+  def parse_list_multipart_uploads(xml) when is_binary(xml) do
+    doc = parse(xml)
+
+    %{
+      uploads:
+        doc
+        |> xpath_all(~c"//Upload")
+        |> Enum.map(&parse_upload/1),
+      is_truncated: xpath_text(doc, ~c"//IsTruncated") == "true"
+    }
+  end
+
+  def build_complete_body(parts) do
+    parts_xml =
+      Enum.map_join(parts, fn %{part_number: n, etag: etag} ->
+        "<Part><PartNumber>#{n}</PartNumber><ETag>#{etag}</ETag></Part>"
+      end)
+
+    "<CompleteMultipartUpload>#{parts_xml}</CompleteMultipartUpload>"
+  end
+
+  defp parse_part(node) do
+    %{
+      part_number:
+        node
+        |> xpath_text(~c"./PartNumber")
+        |> to_integer(),
+      etag: xpath_text(node, ~c"./ETag"),
+      size:
+        node
+        |> xpath_text(~c"./Size")
+        |> to_integer()
+    }
+  end
+
+  defp parse_upload(node) do
+    %{
+      key: xpath_text(node, ~c"./Key"),
+      upload_id: xpath_text(node, ~c"./UploadId")
+    }
+  end
+
   defp parse_object(node) do
     %{
       key: xpath_text(node, ~c"./Key"),

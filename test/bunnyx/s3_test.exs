@@ -221,6 +221,131 @@ defmodule Bunnyx.S3Test do
     end
   end
 
+  describe "create_multipart_upload/2" do
+    test "returns upload ID", %{client: client} do
+      xml = """
+      <?xml version="1.0" encoding="UTF-8"?>
+      <InitiateMultipartUploadResult>
+        <UploadId>upload-abc-123</UploadId>
+      </InitiateMultipartUploadResult>
+      """
+
+      expect(Bunnyx.HTTP, :request, fn _req, :post, "/my-zone/large.bin", opts ->
+        assert opts[:params] == %{"uploads" => ""}
+        {:ok, xml}
+      end)
+
+      assert {:ok, "upload-abc-123"} = Bunnyx.S3.create_multipart_upload(client, "large.bin")
+    end
+  end
+
+  describe "upload_part/5" do
+    test "returns ETag from response headers", %{client: client} do
+      headers = %{"etag" => ["\"part-etag-1\""]}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :put, "/my-zone/large.bin", opts ->
+        assert opts[:params] == %{"partNumber" => 1, "uploadId" => "upload-123"}
+        assert opts[:body] == <<1, 2, 3>>
+        assert opts[:return_headers] == true
+        {:ok, {"", headers}}
+      end)
+
+      assert {:ok, "\"part-etag-1\""} =
+               Bunnyx.S3.upload_part(client, "large.bin", "upload-123", 1, <<1, 2, 3>>)
+    end
+  end
+
+  describe "complete_multipart_upload/4" do
+    test "sends parts XML and returns result", %{client: client} do
+      xml = """
+      <?xml version="1.0" encoding="UTF-8"?>
+      <CompleteMultipartUploadResult>
+        <ETag>"final-etag"</ETag>
+        <Key>large.bin</Key>
+      </CompleteMultipartUploadResult>
+      """
+
+      parts = [
+        %{part_number: 1, etag: "\"etag1\""},
+        %{part_number: 2, etag: "\"etag2\""}
+      ]
+
+      expect(Bunnyx.HTTP, :request, fn _req, :post, "/my-zone/large.bin", opts ->
+        assert opts[:params] == %{"uploadId" => "upload-123"}
+        assert opts[:body] =~ "<PartNumber>1</PartNumber>"
+        assert opts[:body] =~ "<ETag>\"etag1\"</ETag>"
+        assert opts[:body] =~ "<PartNumber>2</PartNumber>"
+        {:ok, xml}
+      end)
+
+      assert {:ok, result} =
+               Bunnyx.S3.complete_multipart_upload(client, "large.bin", "upload-123", parts)
+
+      assert result.etag == "\"final-etag\""
+      assert result.key == "large.bin"
+    end
+  end
+
+  describe "abort_multipart_upload/3" do
+    test "returns {:ok, nil}", %{client: client} do
+      expect(Bunnyx.HTTP, :request, fn _req, :delete, "/my-zone/large.bin", opts ->
+        assert opts[:params] == %{"uploadId" => "upload-123"}
+        {:ok, ""}
+      end)
+
+      assert {:ok, nil} = Bunnyx.S3.abort_multipart_upload(client, "large.bin", "upload-123")
+    end
+  end
+
+  describe "list_parts/3" do
+    test "returns parsed parts", %{client: client} do
+      xml = """
+      <?xml version="1.0" encoding="UTF-8"?>
+      <ListPartsResult>
+        <IsTruncated>false</IsTruncated>
+        <Part>
+          <PartNumber>1</PartNumber>
+          <ETag>"etag1"</ETag>
+          <Size>5242880</Size>
+        </Part>
+      </ListPartsResult>
+      """
+
+      expect(Bunnyx.HTTP, :request, fn _req, :get, "/my-zone/large.bin", opts ->
+        assert opts[:params] == %{"uploadId" => "upload-123"}
+        {:ok, xml}
+      end)
+
+      assert {:ok, result} = Bunnyx.S3.list_parts(client, "large.bin", "upload-123")
+      assert [%{part_number: 1, etag: "\"etag1\"", size: 5_242_880}] = result.parts
+      assert result.is_truncated == false
+    end
+  end
+
+  describe "list_multipart_uploads/1" do
+    test "returns in-progress uploads", %{client: client} do
+      xml = """
+      <?xml version="1.0" encoding="UTF-8"?>
+      <ListMultipartUploadsResult>
+        <IsTruncated>false</IsTruncated>
+        <Upload>
+          <Key>large.bin</Key>
+          <UploadId>upload-123</UploadId>
+        </Upload>
+      </ListMultipartUploadsResult>
+      """
+
+      expect(Bunnyx.HTTP, :request, fn _req, :get, "/my-zone", opts ->
+        assert opts[:params] == %{"uploads" => ""}
+        {:ok, xml}
+      end)
+
+      assert {:ok, result} = Bunnyx.S3.list_multipart_uploads(client)
+      assert [%{key: "large.bin", upload_id: "upload-123"}] = result.uploads
+      assert result.is_truncated == false
+    end
+  end
+
   describe "resolve" do
     test "accepts keyword list as client" do
       expect(Bunnyx.HTTP, :request, fn _req, :get, "/test-zone/file.txt", _opts ->
