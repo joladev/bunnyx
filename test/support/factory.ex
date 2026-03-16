@@ -130,6 +130,51 @@ defmodule Bunnyx.Factory do
     )
   end
 
+  def video_library_response(overrides \\ %{}) do
+    Map.merge(
+      %{
+        "Id" => 90_001,
+        "Name" => "my-library",
+        "VideoCount" => 42,
+        "TrafficUsage" => 1_073_741_824,
+        "StorageUsage" => 536_870_912,
+        "DateCreated" => "2025-01-01T00:00:00Z",
+        "DateModified" => "2025-06-01T12:00:00Z",
+        "ReplicationRegions" => ["NY"],
+        "ApiKey" => "lib-api-key-123",
+        "ReadOnlyApiKey" => "lib-ro-key-123",
+        "HasWatermark" => false,
+        "PullZoneId" => 12_345,
+        "StorageZoneId" => 80_001,
+        "EnabledResolutions" => "240p,360p,480p,720p,1080p",
+        "WebhookUrl" => "",
+        "AllowedReferrers" => [],
+        "BlockedReferrers" => [],
+        "PlayerTokenAuthenticationEnabled" => false,
+        "EnableMP4Fallback" => true,
+        "KeepOriginalFiles" => true,
+        "AllowDirectPlay" => true,
+        "EnableDRM" => false,
+        "EnableTranscribing" => false,
+        "UILanguage" => "en",
+        "PlayerKeyColor" => "#ff6600"
+      },
+      overrides
+    )
+  end
+
+  def video_library_list_response(overrides \\ %{}) do
+    Map.merge(
+      %{
+        "Items" => [video_library_response()],
+        "CurrentPage" => 1,
+        "TotalItems" => 1,
+        "HasMoreItems" => false
+      },
+      overrides
+    )
+  end
+
   def dns_zone_list_response(overrides \\ %{}) do
     Map.merge(
       %{
