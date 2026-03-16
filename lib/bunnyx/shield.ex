@@ -331,6 +331,159 @@ defmodule Bunnyx.Shield do
     end
   end
 
+  # -- Metrics --
+
+  @doc "Returns a metrics overview for a Shield zone."
+  @spec metrics_overview(Bunnyx.t() | keyword(), pos_integer()) ::
+          {:ok, map()} | {:error, Bunnyx.Error.t()}
+  def metrics_overview(client, shield_zone_id) do
+    client = Bunnyx.resolve(client)
+
+    case Bunnyx.HTTP.request(
+           client.req,
+           :get,
+           "/shield/metrics/overview/#{shield_zone_id}",
+           []
+         ) do
+      {:ok, body} -> {:ok, unwrap_raw_data(body)}
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc """
+  Returns detailed metrics for a Shield zone within a time range.
+
+  ## Options
+
+    * `:start_date` — start date (ISO 8601 string)
+    * `:end_date` — end date (ISO 8601 string)
+    * `:resolution` — time resolution (0-6)
+
+  """
+  @spec metrics_detailed(Bunnyx.t() | keyword(), pos_integer(), keyword()) ::
+          {:ok, map()} | {:error, Bunnyx.Error.t()}
+  def metrics_detailed(client, shield_zone_id, opts \\ []) do
+    client = Bunnyx.resolve(client)
+    params = to_metrics_params(opts)
+
+    case Bunnyx.HTTP.request(
+           client.req,
+           :get,
+           "/shield/metrics/overview/#{shield_zone_id}/detailed",
+           params: params
+         ) do
+      {:ok, body} -> {:ok, unwrap_raw_data(body)}
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc "Returns aggregated rate limit metrics for a Shield zone."
+  @spec metrics_rate_limits(Bunnyx.t() | keyword(), pos_integer()) ::
+          {:ok, map()} | {:error, Bunnyx.Error.t()}
+  def metrics_rate_limits(client, shield_zone_id) do
+    client = Bunnyx.resolve(client)
+
+    case Bunnyx.HTTP.request(
+           client.req,
+           :get,
+           "/shield/metrics/rate-limits/#{shield_zone_id}",
+           []
+         ) do
+      {:ok, body} -> {:ok, unwrap_raw_data(body)}
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc "Returns detailed metrics for a specific rate limit."
+  @spec metrics_rate_limit(Bunnyx.t() | keyword(), pos_integer()) ::
+          {:ok, map()} | {:error, Bunnyx.Error.t()}
+  def metrics_rate_limit(client, rate_limit_id) do
+    client = Bunnyx.resolve(client)
+
+    case Bunnyx.HTTP.request(
+           client.req,
+           :get,
+           "/shield/metrics/rate-limit/#{rate_limit_id}",
+           []
+         ) do
+      {:ok, body} -> {:ok, unwrap_raw_data(body)}
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc "Returns bot detection metrics for a Shield zone."
+  @spec metrics_bot_detection(Bunnyx.t() | keyword(), pos_integer()) ::
+          {:ok, map()} | {:error, Bunnyx.Error.t()}
+  def metrics_bot_detection(client, shield_zone_id) do
+    client = Bunnyx.resolve(client)
+
+    case Bunnyx.HTTP.request(
+           client.req,
+           :get,
+           "/shield/metrics/shield-zone/#{shield_zone_id}/bot-detection",
+           []
+         ) do
+      {:ok, body} -> {:ok, unwrap_raw_data(body)}
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc "Returns metrics for a specific WAF rule within a Shield zone."
+  @spec metrics_waf_rule(Bunnyx.t() | keyword(), pos_integer(), String.t()) ::
+          {:ok, map()} | {:error, Bunnyx.Error.t()}
+  def metrics_waf_rule(client, shield_zone_id, rule_id) do
+    client = Bunnyx.resolve(client)
+
+    case Bunnyx.HTTP.request(
+           client.req,
+           :get,
+           "/shield/metrics/shield-zone/#{shield_zone_id}/waf-rule/#{rule_id}",
+           []
+         ) do
+      {:ok, body} -> {:ok, unwrap_raw_data(body)}
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc "Returns upload scanning metrics for a Shield zone."
+  @spec metrics_upload_scanning(Bunnyx.t() | keyword(), pos_integer()) ::
+          {:ok, map()} | {:error, Bunnyx.Error.t()}
+  def metrics_upload_scanning(client, shield_zone_id) do
+    client = Bunnyx.resolve(client)
+
+    case Bunnyx.HTTP.request(
+           client.req,
+           :get,
+           "/shield/metrics/shield-zone/#{shield_zone_id}/upload-scanning",
+           []
+         ) do
+      {:ok, body} -> {:ok, unwrap_raw_data(body)}
+      {:error, _} = error -> error
+    end
+  end
+
+  # -- Event Logs --
+
+  @doc """
+  Returns security event logs for a Shield zone on a given date.
+
+  The date can be a `Date` struct or a string in `"MM-dd-yyyy"` format.
+  Pass a continuation token for pagination.
+  """
+  @spec event_logs(Bunnyx.t() | keyword(), pos_integer(), Date.t() | String.t(), String.t()) ::
+          {:ok, map()} | {:error, Bunnyx.Error.t()}
+  def event_logs(client, shield_zone_id, date, continuation_token \\ "") do
+    client = Bunnyx.resolve(client)
+    date_str = format_date(date)
+
+    path = "/shield/event-logs/#{shield_zone_id}/#{date_str}/#{continuation_token}"
+
+    case Bunnyx.HTTP.request(client.req, :get, path, []) do
+      {:ok, body} -> {:ok, body}
+      {:error, _} = error -> error
+    end
+  end
+
   # -- Bot Detection --
 
   @doc "Gets the bot detection configuration for a Shield zone."
@@ -696,6 +849,19 @@ defmodule Bunnyx.Shield do
       {Map.fetch!(@access_list_config_mapping, key), value}
     end)
   end
+
+  defp to_metrics_params(opts) do
+    mapping = %{start_date: "StartDate", end_date: "EndDate", resolution: "Resolution"}
+
+    opts
+    |> Keyword.take([:start_date, :end_date, :resolution])
+    |> Map.new(fn {key, value} ->
+      {Map.fetch!(mapping, key), value}
+    end)
+  end
+
+  defp format_date(%Date{} = date), do: Calendar.strftime(date, "%m-%d-%Y")
+  defp format_date(date) when is_binary(date), do: date
 
   defp to_page_params(opts) do
     mapping = %{page: "page", page_size: "pageSize"}

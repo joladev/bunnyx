@@ -322,6 +322,140 @@ defmodule Bunnyx.ShieldTest do
     end
   end
 
+  # -- Metrics --
+
+  describe "metrics_overview/2" do
+    test "returns metrics overview", %{client: client} do
+      response = %{"data" => %{"waf" => %{}, "ddos" => %{}}}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :get, "/shield/metrics/overview/100001", _opts ->
+        {:ok, response}
+      end)
+
+      assert {:ok, %{"waf" => %{}}} = Bunnyx.Shield.metrics_overview(client, 100_001)
+    end
+  end
+
+  describe "metrics_detailed/3" do
+    test "passes date params", %{client: client} do
+      response = %{"data" => %{"chart" => %{}}}
+
+      expect(Bunnyx.HTTP, :request, fn _req,
+                                       :get,
+                                       "/shield/metrics/overview/100001/detailed",
+                                       opts ->
+        assert opts[:params]["StartDate"] == "2025-06-01"
+        assert opts[:params]["EndDate"] == "2025-06-30"
+        {:ok, response}
+      end)
+
+      assert {:ok, _} =
+               Bunnyx.Shield.metrics_detailed(client, 100_001,
+                 start_date: "2025-06-01",
+                 end_date: "2025-06-30"
+               )
+    end
+  end
+
+  describe "metrics_rate_limits/2" do
+    test "returns rate limit metrics", %{client: client} do
+      response = %{"data" => %{}}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :get, "/shield/metrics/rate-limits/100001", _opts ->
+        {:ok, response}
+      end)
+
+      assert {:ok, _} = Bunnyx.Shield.metrics_rate_limits(client, 100_001)
+    end
+  end
+
+  describe "metrics_rate_limit/2" do
+    test "returns per-rate-limit metrics", %{client: client} do
+      response = %{"data" => %{"totalTriggers" => 50}}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :get, "/shield/metrics/rate-limit/1", _opts ->
+        {:ok, response}
+      end)
+
+      assert {:ok, _} = Bunnyx.Shield.metrics_rate_limit(client, 1)
+    end
+  end
+
+  describe "metrics_bot_detection/2" do
+    test "returns bot detection metrics", %{client: client} do
+      response = %{"data" => %{}}
+
+      expect(Bunnyx.HTTP, :request, fn _req,
+                                       :get,
+                                       "/shield/metrics/shield-zone/100001/bot-detection",
+                                       _opts ->
+        {:ok, response}
+      end)
+
+      assert {:ok, _} = Bunnyx.Shield.metrics_bot_detection(client, 100_001)
+    end
+  end
+
+  describe "metrics_waf_rule/3" do
+    test "returns per-rule metrics", %{client: client} do
+      response = %{"data" => %{"totalTriggers" => 10}}
+
+      expect(Bunnyx.HTTP, :request, fn _req,
+                                       :get,
+                                       "/shield/metrics/shield-zone/100001/waf-rule/rule-1",
+                                       _opts ->
+        {:ok, response}
+      end)
+
+      assert {:ok, _} = Bunnyx.Shield.metrics_waf_rule(client, 100_001, "rule-1")
+    end
+  end
+
+  describe "metrics_upload_scanning/2" do
+    test "returns upload scanning metrics", %{client: client} do
+      response = %{"data" => %{}}
+
+      expect(Bunnyx.HTTP, :request, fn _req,
+                                       :get,
+                                       "/shield/metrics/shield-zone/100001/upload-scanning",
+                                       _opts ->
+        {:ok, response}
+      end)
+
+      assert {:ok, _} = Bunnyx.Shield.metrics_upload_scanning(client, 100_001)
+    end
+  end
+
+  # -- Event Logs --
+
+  describe "event_logs/4" do
+    test "returns event logs for a date", %{client: client} do
+      response = %{"logs" => [], "continuationToken" => "next-page"}
+
+      expect(Bunnyx.HTTP, :request, fn _req,
+                                       :get,
+                                       "/shield/event-logs/100001/06-01-2025/",
+                                       _opts ->
+        {:ok, response}
+      end)
+
+      assert {:ok, ^response} = Bunnyx.Shield.event_logs(client, 100_001, ~D[2025-06-01])
+    end
+
+    test "passes continuation token", %{client: client} do
+      response = %{"logs" => []}
+
+      expect(Bunnyx.HTTP, :request, fn _req,
+                                       :get,
+                                       "/shield/event-logs/100001/06-01-2025/abc123",
+                                       _opts ->
+        {:ok, response}
+      end)
+
+      assert {:ok, _} = Bunnyx.Shield.event_logs(client, 100_001, "06-01-2025", "abc123")
+    end
+  end
+
   # -- Bot Detection --
 
   describe "get_bot_detection/2" do
