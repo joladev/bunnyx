@@ -18,6 +18,7 @@ defmodule Bunnyx.Stream do
       {:ok, nil} = Bunnyx.Stream.delete(client, video.guid)
   """
 
+  alias Bunnyx.Stream.Collection
   alias Bunnyx.Stream.Video
 
   @type t :: %__MODULE__{req: Req.Request.t(), library_id: pos_integer()}
@@ -223,6 +224,202 @@ defmodule Bunnyx.Stream do
     end
   end
 
+  # -- Collections --
+
+  @doc """
+  Lists collections in the library.
+
+  ## Options
+
+    * `:page` — page number
+    * `:items_per_page` — items per page
+    * `:search` — search term
+    * `:order_by` — sort field
+    * `:include_thumbnails` — include preview image URLs
+
+  """
+  @spec list_collections(t() | keyword(), keyword()) ::
+          {:ok,
+           %{
+             items: [Collection.t()],
+             current_page: integer(),
+             total_items: integer(),
+             items_per_page: integer()
+           }}
+          | {:error, Bunnyx.Error.t()}
+  def list_collections(client, opts \\ []) do
+    client = resolve(client)
+    params = to_collection_params(opts)
+
+    case Bunnyx.HTTP.request(client.req, :get, "/library/#{client.library_id}/collections",
+           params: params
+         ) do
+      {:ok, body} ->
+        {:ok,
+         %{
+           items: Enum.map(body["items"], &Collection.from_response/1),
+           current_page: body["currentPage"],
+           total_items: body["totalItems"],
+           items_per_page: body["itemsPerPage"]
+         }}
+
+      {:error, _} = error ->
+        error
+    end
+  end
+
+  @doc "Fetches a collection by GUID."
+  @spec get_collection(t() | keyword(), String.t()) ::
+          {:ok, Collection.t()} | {:error, Bunnyx.Error.t()}
+  def get_collection(client, collection_id) do
+    client = resolve(client)
+
+    case Bunnyx.HTTP.request(
+           client.req,
+           :get,
+           "/library/#{client.library_id}/collections/#{collection_id}",
+           []
+         ) do
+      {:ok, body} -> {:ok, Collection.from_response(body)}
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc "Creates a collection with the given name."
+  @spec create_collection(t() | keyword(), String.t()) ::
+          {:ok, Collection.t()} | {:error, Bunnyx.Error.t()}
+  def create_collection(client, name) do
+    client = resolve(client)
+
+    case Bunnyx.HTTP.request(client.req, :post, "/library/#{client.library_id}/collections",
+           json: %{"name" => name}
+         ) do
+      {:ok, body} -> {:ok, Collection.from_response(body)}
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc "Updates a collection's name."
+  @spec update_collection(t() | keyword(), String.t(), String.t()) ::
+          {:ok, Collection.t()} | {:error, Bunnyx.Error.t()}
+  def update_collection(client, collection_id, name) do
+    client = resolve(client)
+
+    case Bunnyx.HTTP.request(
+           client.req,
+           :post,
+           "/library/#{client.library_id}/collections/#{collection_id}",
+           json: %{"name" => name}
+         ) do
+      {:ok, body} -> {:ok, Collection.from_response(body)}
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc "Deletes a collection."
+  @spec delete_collection(t() | keyword(), String.t()) ::
+          {:ok, nil} | {:error, Bunnyx.Error.t()}
+  def delete_collection(client, collection_id) do
+    client = resolve(client)
+
+    case Bunnyx.HTTP.request(
+           client.req,
+           :delete,
+           "/library/#{client.library_id}/collections/#{collection_id}",
+           []
+         ) do
+      {:ok, _} -> {:ok, nil}
+      {:error, _} = error -> error
+    end
+  end
+
+  # -- Video metadata --
+
+  @doc "Adds or updates a caption track for a video."
+  @spec add_caption(t() | keyword(), String.t(), String.t(), String.t(), String.t()) ::
+          {:ok, nil} | {:error, Bunnyx.Error.t()}
+  def add_caption(client, video_id, srclang, label, captions_file) do
+    client = resolve(client)
+
+    case Bunnyx.HTTP.request(
+           client.req,
+           :post,
+           "/library/#{client.library_id}/videos/#{video_id}/captions/#{srclang}",
+           json: %{"srclang" => srclang, "label" => label, "captionsFile" => captions_file}
+         ) do
+      {:ok, _} -> {:ok, nil}
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc "Deletes a caption track from a video."
+  @spec delete_caption(t() | keyword(), String.t(), String.t()) ::
+          {:ok, nil} | {:error, Bunnyx.Error.t()}
+  def delete_caption(client, video_id, srclang) do
+    client = resolve(client)
+
+    case Bunnyx.HTTP.request(
+           client.req,
+           :delete,
+           "/library/#{client.library_id}/videos/#{video_id}/captions/#{srclang}",
+           []
+         ) do
+      {:ok, _} -> {:ok, nil}
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc "Sets a video thumbnail from a URL."
+  @spec set_thumbnail(t() | keyword(), String.t(), String.t()) ::
+          {:ok, nil} | {:error, Bunnyx.Error.t()}
+  def set_thumbnail(client, video_id, thumbnail_url) do
+    client = resolve(client)
+
+    case Bunnyx.HTTP.request(
+           client.req,
+           :post,
+           "/library/#{client.library_id}/videos/#{video_id}/thumbnail",
+           params: %{"thumbnailUrl" => thumbnail_url}
+         ) do
+      {:ok, _} -> {:ok, nil}
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc "Triggers re-encoding of a video."
+  @spec reencode(t() | keyword(), String.t()) ::
+          {:ok, nil} | {:error, Bunnyx.Error.t()}
+  def reencode(client, video_id) do
+    client = resolve(client)
+
+    case Bunnyx.HTTP.request(
+           client.req,
+           :post,
+           "/library/#{client.library_id}/videos/#{video_id}/reencode",
+           []
+         ) do
+      {:ok, _} -> {:ok, nil}
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc "Returns the video watch heatmap data."
+  @spec heatmap(t() | keyword(), String.t()) ::
+          {:ok, map()} | {:error, Bunnyx.Error.t()}
+  def heatmap(client, video_id) do
+    client = resolve(client)
+
+    case Bunnyx.HTTP.request(
+           client.req,
+           :get,
+           "/library/#{client.library_id}/videos/#{video_id}/heatmap",
+           []
+         ) do
+      {:ok, body} -> {:ok, body}
+      {:error, _} = error -> error
+    end
+  end
+
   @create_mapping %{
     title: "title",
     collection_id: "collectionId",
@@ -254,6 +451,22 @@ defmodule Bunnyx.Stream do
   defp to_fetch_body(attrs) do
     Map.new(attrs, fn {key, value} ->
       {Map.fetch!(@fetch_mapping, key), value}
+    end)
+  end
+
+  defp to_collection_params(opts) do
+    mapping = %{
+      page: "page",
+      items_per_page: "itemsPerPage",
+      search: "search",
+      order_by: "orderBy",
+      include_thumbnails: "includeThumbnails"
+    }
+
+    opts
+    |> Keyword.take([:page, :items_per_page, :search, :order_by, :include_thumbnails])
+    |> Map.new(fn {key, value} ->
+      {Map.fetch!(mapping, key), value}
     end)
   end
 

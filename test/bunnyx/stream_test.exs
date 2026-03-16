@@ -138,6 +138,166 @@ defmodule Bunnyx.StreamTest do
     end
   end
 
+  # -- Collections --
+
+  describe "list_collections/2" do
+    test "returns parsed collections", %{client: client} do
+      response = Bunnyx.Factory.collection_list_response()
+
+      expect(Bunnyx.HTTP, :request, fn _req, :get, "/library/90001/collections", opts ->
+        assert opts[:params] == %{}
+        {:ok, response}
+      end)
+
+      assert {:ok, page} = Bunnyx.Stream.list_collections(client)
+      assert [%Bunnyx.Stream.Collection{guid: "col-a1b2c3d4", name: "My Collection"}] = page.items
+      assert page.total_items == 1
+    end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 500, message: "Server error"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :get, "/library/90001/collections", _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} = Bunnyx.Stream.list_collections(client)
+    end
+  end
+
+  describe "get_collection/2" do
+    test "returns parsed collection", %{client: client} do
+      response = Bunnyx.Factory.collection_response()
+
+      expect(Bunnyx.HTTP, :request, fn _req, :get, "/library/90001/collections/col-123", _opts ->
+        {:ok, response}
+      end)
+
+      assert {:ok, %Bunnyx.Stream.Collection{name: "My Collection"}} =
+               Bunnyx.Stream.get_collection(client, "col-123")
+    end
+  end
+
+  describe "create_collection/2" do
+    test "sends name and returns parsed collection", %{client: client} do
+      response = Bunnyx.Factory.collection_response(%{"name" => "New Col"})
+
+      expect(Bunnyx.HTTP, :request, fn _req, :post, "/library/90001/collections", opts ->
+        assert opts[:json] == %{"name" => "New Col"}
+        {:ok, response}
+      end)
+
+      assert {:ok, %Bunnyx.Stream.Collection{name: "New Col"}} =
+               Bunnyx.Stream.create_collection(client, "New Col")
+    end
+  end
+
+  describe "update_collection/3" do
+    test "sends name to correct path", %{client: client} do
+      response = Bunnyx.Factory.collection_response(%{"name" => "Renamed"})
+
+      expect(Bunnyx.HTTP, :request, fn _req, :post, "/library/90001/collections/col-123", opts ->
+        assert opts[:json] == %{"name" => "Renamed"}
+        {:ok, response}
+      end)
+
+      assert {:ok, %Bunnyx.Stream.Collection{name: "Renamed"}} =
+               Bunnyx.Stream.update_collection(client, "col-123", "Renamed")
+    end
+  end
+
+  describe "delete_collection/2" do
+    test "returns {:ok, nil}", %{client: client} do
+      expect(Bunnyx.HTTP, :request, fn _req,
+                                       :delete,
+                                       "/library/90001/collections/col-123",
+                                       _opts ->
+        {:ok, ""}
+      end)
+
+      assert {:ok, nil} = Bunnyx.Stream.delete_collection(client, "col-123")
+    end
+  end
+
+  # -- Video metadata --
+
+  describe "add_caption/5" do
+    test "sends caption data and returns {:ok, nil}", %{client: client} do
+      expect(Bunnyx.HTTP, :request, fn _req,
+                                       :post,
+                                       "/library/90001/videos/abc-123/captions/en",
+                                       opts ->
+        assert opts[:json] == %{
+                 "srclang" => "en",
+                 "label" => "English",
+                 "captionsFile" => "base64data"
+               }
+
+        {:ok, ""}
+      end)
+
+      assert {:ok, nil} =
+               Bunnyx.Stream.add_caption(client, "abc-123", "en", "English", "base64data")
+    end
+  end
+
+  describe "delete_caption/3" do
+    test "returns {:ok, nil}", %{client: client} do
+      expect(Bunnyx.HTTP, :request, fn _req,
+                                       :delete,
+                                       "/library/90001/videos/abc-123/captions/en",
+                                       _opts ->
+        {:ok, ""}
+      end)
+
+      assert {:ok, nil} = Bunnyx.Stream.delete_caption(client, "abc-123", "en")
+    end
+  end
+
+  describe "set_thumbnail/3" do
+    test "sends thumbnail URL and returns {:ok, nil}", %{client: client} do
+      expect(Bunnyx.HTTP, :request, fn _req,
+                                       :post,
+                                       "/library/90001/videos/abc-123/thumbnail",
+                                       opts ->
+        assert opts[:params] == %{"thumbnailUrl" => "https://example.com/thumb.jpg"}
+        {:ok, ""}
+      end)
+
+      assert {:ok, nil} =
+               Bunnyx.Stream.set_thumbnail(client, "abc-123", "https://example.com/thumb.jpg")
+    end
+  end
+
+  describe "reencode/2" do
+    test "returns {:ok, nil}", %{client: client} do
+      expect(Bunnyx.HTTP, :request, fn _req,
+                                       :post,
+                                       "/library/90001/videos/abc-123/reencode",
+                                       _opts ->
+        {:ok, ""}
+      end)
+
+      assert {:ok, nil} = Bunnyx.Stream.reencode(client, "abc-123")
+    end
+  end
+
+  describe "heatmap/2" do
+    test "returns heatmap data", %{client: client} do
+      response = %{"heatmap" => [0.1, 0.5, 0.8, 0.3]}
+
+      expect(Bunnyx.HTTP, :request, fn _req,
+                                       :get,
+                                       "/library/90001/videos/abc-123/heatmap",
+                                       _opts ->
+        {:ok, response}
+      end)
+
+      assert {:ok, %{"heatmap" => [0.1, 0.5, 0.8, 0.3]}} =
+               Bunnyx.Stream.heatmap(client, "abc-123")
+    end
+  end
+
   describe "resolve" do
     test "accepts keyword list as client" do
       response = Bunnyx.Factory.video_response()

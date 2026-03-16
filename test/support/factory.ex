@@ -205,6 +205,33 @@ defmodule Bunnyx.Factory do
     )
   end
 
+  def collection_response(overrides \\ %{}) do
+    Map.merge(
+      %{
+        "guid" => "col-a1b2c3d4",
+        "name" => "My Collection",
+        "videoLibraryId" => 90_001,
+        "videoCount" => 10,
+        "totalSize" => 104_857_600,
+        "previewVideoIds" => "",
+        "previewImageUrls" => []
+      },
+      overrides
+    )
+  end
+
+  def collection_list_response(overrides \\ %{}) do
+    Map.merge(
+      %{
+        "items" => [collection_response()],
+        "currentPage" => 1,
+        "totalItems" => 1,
+        "itemsPerPage" => 100
+      },
+      overrides
+    )
+  end
+
   def video_list_response(overrides \\ %{}) do
     Map.merge(
       %{
