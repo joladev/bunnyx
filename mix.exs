@@ -24,7 +24,7 @@ defmodule Bunnyx.MixProject do
 
   def application do
     [
-      extra_applications: [:logger]
+      extra_applications: [:logger, :xmerl]
     ]
   end
 

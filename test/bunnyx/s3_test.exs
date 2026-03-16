@@ -131,6 +131,96 @@ defmodule Bunnyx.S3Test do
     end
   end
 
+  describe "list/2" do
+    test "returns parsed list objects response", %{client: client} do
+      xml = """
+      <?xml version="1.0" encoding="UTF-8"?>
+      <ListBucketResult>
+        <IsTruncated>false</IsTruncated>
+        <Contents>
+          <Key>images/logo.png</Key>
+          <LastModified>2025-06-01T12:00:00.000Z</LastModified>
+          <ETag>"abc123"</ETag>
+          <Size>1024</Size>
+        </Contents>
+        <CommonPrefixes>
+          <Prefix>videos/</Prefix>
+        </CommonPrefixes>
+      </ListBucketResult>
+      """
+
+      expect(Bunnyx.HTTP, :request, fn _req, :get, "/my-zone", opts ->
+        assert opts[:params]["list-type"] == "2"
+        {:ok, xml}
+      end)
+
+      assert {:ok, result} = Bunnyx.S3.list(client)
+      assert [%{key: "images/logo.png", size: 1024, etag: "\"abc123\""}] = result.contents
+      assert ["videos/"] = result.common_prefixes
+      assert result.is_truncated == false
+      assert result.next_continuation_token == nil
+    end
+
+    test "passes list params", %{client: client} do
+      xml = """
+      <?xml version="1.0" encoding="UTF-8"?>
+      <ListBucketResult>
+        <IsTruncated>false</IsTruncated>
+      </ListBucketResult>
+      """
+
+      expect(Bunnyx.HTTP, :request, fn _req, :get, "/my-zone", opts ->
+        assert opts[:params]["prefix"] == "images/"
+        assert opts[:params]["delimiter"] == "/"
+        assert opts[:params]["max-keys"] == 10
+        {:ok, xml}
+      end)
+
+      Bunnyx.S3.list(client, prefix: "images/", delimiter: "/", max_keys: 10)
+    end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 403, message: "InvalidSecurity"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :get, "/my-zone", _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} = Bunnyx.S3.list(client)
+    end
+  end
+
+  describe "copy/3" do
+    test "sends copy header and returns parsed result", %{client: client} do
+      xml = """
+      <?xml version="1.0" encoding="UTF-8"?>
+      <CopyObjectResult>
+        <ETag>"def456"</ETag>
+        <LastModified>2025-06-01T12:00:00.000Z</LastModified>
+      </CopyObjectResult>
+      """
+
+      expect(Bunnyx.HTTP, :request, fn _req, :put, "/my-zone/dest.txt", opts ->
+        assert opts[:headers] == [{"x-amz-copy-source", "/my-zone/source.txt"}]
+        {:ok, xml}
+      end)
+
+      assert {:ok, result} = Bunnyx.S3.copy(client, "source.txt", "dest.txt")
+      assert result.etag == "\"def456\""
+      assert result.last_modified == "2025-06-01T12:00:00.000Z"
+    end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 404, message: "NoSuchKey"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :put, "/my-zone/dest.txt", _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} = Bunnyx.S3.copy(client, "missing.txt", "dest.txt")
+    end
+  end
+
   describe "resolve" do
     test "accepts keyword list as client" do
       expect(Bunnyx.HTTP, :request, fn _req, :get, "/test-zone/file.txt", _opts ->

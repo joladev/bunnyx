@@ -15,6 +15,8 @@ defmodule Bunnyx.S3 do
       {:ok, nil} = Bunnyx.S3.delete(client, "images/logo.png")
   """
 
+  alias Bunnyx.S3.XML
+
   @type t :: %__MODULE__{req: Req.Request.t(), zone: String.t()}
 
   @enforce_keys [:req, :zone]
@@ -114,6 +116,51 @@ defmodule Bunnyx.S3 do
     end
   end
 
+  @doc """
+  Lists objects in the bucket using ListObjectsV2.
+
+  ## Options
+
+    * `:prefix` — filter by key prefix
+    * `:delimiter` — group keys by delimiter (e.g. `"/"` for directory-like listing)
+    * `:continuation_token` — pagination token from a previous response
+    * `:max_keys` — maximum number of keys to return (max 1000)
+
+  """
+  @spec list(t() | keyword(), keyword()) ::
+          {:ok,
+           %{
+             contents: [map()],
+             common_prefixes: [String.t()],
+             is_truncated: boolean(),
+             next_continuation_token: String.t() | nil
+           }}
+          | {:error, Bunnyx.Error.t()}
+  def list(client, opts \\ []) do
+    client = resolve(client)
+    params = Map.merge(%{"list-type" => "2"}, to_list_params(opts))
+
+    case Bunnyx.HTTP.request(client.req, :get, "/#{client.zone}", params: params) do
+      {:ok, body} -> {:ok, XML.parse_list_objects(body)}
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc "Copies an object within the same storage zone."
+  @spec copy(t() | keyword(), String.t(), String.t()) ::
+          {:ok, %{etag: String.t() | nil, last_modified: String.t() | nil}}
+          | {:error, Bunnyx.Error.t()}
+  def copy(client, source_key, destination_key) do
+    client = resolve(client)
+
+    case Bunnyx.HTTP.request(client.req, :put, "/#{client.zone}/#{destination_key}",
+           headers: [{"x-amz-copy-source", "/#{client.zone}/#{source_key}"}]
+         ) do
+      {:ok, body} -> {:ok, XML.parse_copy_result(body)}
+      {:error, _} = error -> error
+    end
+  end
+
   @doc "Returns object metadata (headers) without downloading the body."
   @spec head(t() | keyword(), String.t()) :: {:ok, map()} | {:error, Bunnyx.Error.t()}
   def head(client, key) do
@@ -123,6 +170,21 @@ defmodule Bunnyx.S3 do
       {:ok, headers} -> {:ok, headers}
       {:error, _} = error -> error
     end
+  end
+
+  defp to_list_params(opts) do
+    mapping = %{
+      prefix: "prefix",
+      delimiter: "delimiter",
+      continuation_token: "continuation-token",
+      max_keys: "max-keys"
+    }
+
+    opts
+    |> Keyword.take([:prefix, :delimiter, :continuation_token, :max_keys])
+    |> Map.new(fn {key, value} ->
+      {Map.fetch!(mapping, key), value}
+    end)
   end
 
   defp checksum_header(opts) do
