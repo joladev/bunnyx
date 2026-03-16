@@ -193,6 +193,161 @@ defmodule Bunnyx.VideoLibrary do
     end
   end
 
+  @doc "Resets the API key for a specific video library."
+  @spec reset_api_key(Bunnyx.t() | keyword(), pos_integer()) ::
+          {:ok, nil} | {:error, Bunnyx.Error.t()}
+  def reset_api_key(client, id) do
+    client = Bunnyx.resolve(client)
+
+    case Bunnyx.HTTP.request(client.req, :post, "/videolibrary/#{id}/resetApiKey", []) do
+      {:ok, _} -> {:ok, nil}
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc "Resets the API key for all video libraries."
+  @spec reset_all_api_keys(Bunnyx.t() | keyword()) ::
+          {:ok, nil} | {:error, Bunnyx.Error.t()}
+  def reset_all_api_keys(client) do
+    client = Bunnyx.resolve(client)
+
+    case Bunnyx.HTTP.request(client.req, :post, "/videolibrary/resetApiKey", []) do
+      {:ok, _} -> {:ok, nil}
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc "Resets the read-only API key for a specific video library."
+  @spec reset_read_only_api_key(Bunnyx.t() | keyword(), pos_integer()) ::
+          {:ok, nil} | {:error, Bunnyx.Error.t()}
+  def reset_read_only_api_key(client, id) do
+    client = Bunnyx.resolve(client)
+
+    case Bunnyx.HTTP.request(client.req, :post, "/videolibrary/#{id}/resetReadOnlyApiKey", []) do
+      {:ok, _} -> {:ok, nil}
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc "Resets the read-only API key for all video libraries."
+  @spec reset_all_read_only_api_keys(Bunnyx.t() | keyword()) ::
+          {:ok, nil} | {:error, Bunnyx.Error.t()}
+  def reset_all_read_only_api_keys(client) do
+    client = Bunnyx.resolve(client)
+
+    case Bunnyx.HTTP.request(client.req, :post, "/videolibrary/resetReadOnlyApiKey", []) do
+      {:ok, _} -> {:ok, nil}
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc "Uploads a watermark image for a video library."
+  @spec add_watermark(Bunnyx.t() | keyword(), pos_integer(), binary()) ::
+          {:ok, nil} | {:error, Bunnyx.Error.t()}
+  def add_watermark(client, id, image_data) do
+    client = Bunnyx.resolve(client)
+
+    case Bunnyx.HTTP.request(client.req, :put, "/videolibrary/#{id}/watermark", body: image_data) do
+      {:ok, _} -> {:ok, nil}
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc "Removes the watermark from a video library."
+  @spec remove_watermark(Bunnyx.t() | keyword(), pos_integer()) ::
+          {:ok, nil} | {:error, Bunnyx.Error.t()}
+  def remove_watermark(client, id) do
+    client = Bunnyx.resolve(client)
+
+    case Bunnyx.HTTP.request(client.req, :delete, "/videolibrary/#{id}/watermark", []) do
+      {:ok, _} -> {:ok, nil}
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc "Adds a hostname to the video library's allowed referrer list."
+  @spec add_allowed_referrer(Bunnyx.t() | keyword(), pos_integer(), String.t()) ::
+          {:ok, nil} | {:error, Bunnyx.Error.t()}
+  def add_allowed_referrer(client, id, hostname) do
+    client = Bunnyx.resolve(client)
+
+    case Bunnyx.HTTP.request(client.req, :post, "/videolibrary/#{id}/addAllowedReferrer",
+           json: %{"Hostname" => hostname}
+         ) do
+      {:ok, _} -> {:ok, nil}
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc "Removes a hostname from the video library's allowed referrer list."
+  @spec remove_allowed_referrer(Bunnyx.t() | keyword(), pos_integer(), String.t()) ::
+          {:ok, nil} | {:error, Bunnyx.Error.t()}
+  def remove_allowed_referrer(client, id, hostname) do
+    client = Bunnyx.resolve(client)
+
+    case Bunnyx.HTTP.request(client.req, :post, "/videolibrary/#{id}/removeAllowedReferrer",
+           json: %{"Hostname" => hostname}
+         ) do
+      {:ok, _} -> {:ok, nil}
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc "Adds a hostname to the video library's blocked referrer list."
+  @spec add_blocked_referrer(Bunnyx.t() | keyword(), pos_integer(), String.t()) ::
+          {:ok, nil} | {:error, Bunnyx.Error.t()}
+  def add_blocked_referrer(client, id, hostname) do
+    client = Bunnyx.resolve(client)
+
+    case Bunnyx.HTTP.request(client.req, :post, "/videolibrary/#{id}/addBlockedReferrer",
+           json: %{"Hostname" => hostname}
+         ) do
+      {:ok, _} -> {:ok, nil}
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc "Removes a hostname from the video library's blocked referrer list."
+  @spec remove_blocked_referrer(Bunnyx.t() | keyword(), pos_integer(), String.t()) ::
+          {:ok, nil} | {:error, Bunnyx.Error.t()}
+  def remove_blocked_referrer(client, id, hostname) do
+    client = Bunnyx.resolve(client)
+
+    case Bunnyx.HTTP.request(client.req, :post, "/videolibrary/#{id}/removeBlockedReferrer",
+           json: %{"Hostname" => hostname}
+         ) do
+      {:ok, _} -> {:ok, nil}
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc """
+  Returns transcription statistics for a video library.
+
+  ## Options
+
+    * `:date_from` — start date (ISO 8601 string)
+    * `:date_to` — end date (ISO 8601 string)
+
+  """
+  @spec transcribing_statistics(Bunnyx.t() | keyword(), pos_integer(), keyword()) ::
+          {:ok, map()} | {:error, Bunnyx.Error.t()}
+  def transcribing_statistics(client, id, opts \\ []) do
+    client = Bunnyx.resolve(client)
+
+    params =
+      opts
+      |> Keyword.take([:date_from, :date_to])
+      |> to_statistics_params()
+
+    case Bunnyx.HTTP.request(client.req, :get, "/videolibrary/#{id}/transcribing/statistics",
+           params: params
+         ) do
+      {:ok, body} -> {:ok, body}
+      {:error, _} = error -> error
+    end
+  end
+
   @doc "Lists available languages for transcription and captions."
   @spec languages(Bunnyx.t() | keyword()) :: {:ok, list()} | {:error, Bunnyx.Error.t()}
   def languages(client) do
@@ -217,6 +372,14 @@ defmodule Bunnyx.VideoLibrary do
     Map.new(attrs, fn {key, value} ->
       pascal = Map.fetch!(@reverse_mapping, key)
       {pascal, value}
+    end)
+  end
+
+  defp to_statistics_params(opts) do
+    mapping = %{date_from: "dateFrom", date_to: "dateTo"}
+
+    Map.new(opts, fn {key, value} ->
+      {Map.fetch!(mapping, key), value}
     end)
   end
 

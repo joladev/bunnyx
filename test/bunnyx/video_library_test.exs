@@ -129,6 +129,160 @@ defmodule Bunnyx.VideoLibraryTest do
     end
   end
 
+  describe "reset_api_key/2" do
+    test "returns {:ok, nil}", %{client: client} do
+      expect(Bunnyx.HTTP, :request, fn _req, :post, "/videolibrary/90001/resetApiKey", _opts ->
+        {:ok, ""}
+      end)
+
+      assert {:ok, nil} = Bunnyx.VideoLibrary.reset_api_key(client, 90_001)
+    end
+  end
+
+  describe "reset_all_api_keys/1" do
+    test "returns {:ok, nil}", %{client: client} do
+      expect(Bunnyx.HTTP, :request, fn _req, :post, "/videolibrary/resetApiKey", _opts ->
+        {:ok, ""}
+      end)
+
+      assert {:ok, nil} = Bunnyx.VideoLibrary.reset_all_api_keys(client)
+    end
+  end
+
+  describe "reset_read_only_api_key/2" do
+    test "returns {:ok, nil}", %{client: client} do
+      expect(Bunnyx.HTTP, :request, fn _req,
+                                       :post,
+                                       "/videolibrary/90001/resetReadOnlyApiKey",
+                                       _opts ->
+        {:ok, ""}
+      end)
+
+      assert {:ok, nil} = Bunnyx.VideoLibrary.reset_read_only_api_key(client, 90_001)
+    end
+  end
+
+  describe "reset_all_read_only_api_keys/1" do
+    test "returns {:ok, nil}", %{client: client} do
+      expect(Bunnyx.HTTP, :request, fn _req, :post, "/videolibrary/resetReadOnlyApiKey", _opts ->
+        {:ok, ""}
+      end)
+
+      assert {:ok, nil} = Bunnyx.VideoLibrary.reset_all_read_only_api_keys(client)
+    end
+  end
+
+  describe "add_watermark/3" do
+    test "sends image data and returns {:ok, nil}", %{client: client} do
+      expect(Bunnyx.HTTP, :request, fn _req, :put, "/videolibrary/90001/watermark", opts ->
+        assert opts[:body] == <<0, 1, 2, 3>>
+        {:ok, ""}
+      end)
+
+      assert {:ok, nil} = Bunnyx.VideoLibrary.add_watermark(client, 90_001, <<0, 1, 2, 3>>)
+    end
+  end
+
+  describe "remove_watermark/2" do
+    test "returns {:ok, nil}", %{client: client} do
+      expect(Bunnyx.HTTP, :request, fn _req, :delete, "/videolibrary/90001/watermark", _opts ->
+        {:ok, ""}
+      end)
+
+      assert {:ok, nil} = Bunnyx.VideoLibrary.remove_watermark(client, 90_001)
+    end
+  end
+
+  describe "add_allowed_referrer/3" do
+    test "sends hostname and returns {:ok, nil}", %{client: client} do
+      expect(Bunnyx.HTTP, :request, fn _req,
+                                       :post,
+                                       "/videolibrary/90001/addAllowedReferrer",
+                                       opts ->
+        assert opts[:json] == %{"Hostname" => "example.com"}
+        {:ok, ""}
+      end)
+
+      assert {:ok, nil} = Bunnyx.VideoLibrary.add_allowed_referrer(client, 90_001, "example.com")
+    end
+  end
+
+  describe "remove_allowed_referrer/3" do
+    test "sends hostname and returns {:ok, nil}", %{client: client} do
+      expect(Bunnyx.HTTP, :request, fn _req,
+                                       :post,
+                                       "/videolibrary/90001/removeAllowedReferrer",
+                                       opts ->
+        assert opts[:json] == %{"Hostname" => "example.com"}
+        {:ok, ""}
+      end)
+
+      assert {:ok, nil} =
+               Bunnyx.VideoLibrary.remove_allowed_referrer(client, 90_001, "example.com")
+    end
+  end
+
+  describe "add_blocked_referrer/3" do
+    test "sends hostname and returns {:ok, nil}", %{client: client} do
+      expect(Bunnyx.HTTP, :request, fn _req,
+                                       :post,
+                                       "/videolibrary/90001/addBlockedReferrer",
+                                       opts ->
+        assert opts[:json] == %{"Hostname" => "spam.com"}
+        {:ok, ""}
+      end)
+
+      assert {:ok, nil} = Bunnyx.VideoLibrary.add_blocked_referrer(client, 90_001, "spam.com")
+    end
+  end
+
+  describe "remove_blocked_referrer/3" do
+    test "sends hostname and returns {:ok, nil}", %{client: client} do
+      expect(Bunnyx.HTTP, :request, fn _req,
+                                       :post,
+                                       "/videolibrary/90001/removeBlockedReferrer",
+                                       opts ->
+        assert opts[:json] == %{"Hostname" => "spam.com"}
+        {:ok, ""}
+      end)
+
+      assert {:ok, nil} =
+               Bunnyx.VideoLibrary.remove_blocked_referrer(client, 90_001, "spam.com")
+    end
+  end
+
+  describe "transcribing_statistics/3" do
+    test "returns statistics", %{client: client} do
+      response = %{"TotalCharactersUsed" => 50_000}
+
+      expect(Bunnyx.HTTP, :request, fn _req,
+                                       :get,
+                                       "/videolibrary/90001/transcribing/statistics",
+                                       opts ->
+        assert opts[:params] == %{}
+        {:ok, response}
+      end)
+
+      assert {:ok, %{"TotalCharactersUsed" => 50_000}} =
+               Bunnyx.VideoLibrary.transcribing_statistics(client, 90_001)
+    end
+
+    test "passes date params", %{client: client} do
+      expect(Bunnyx.HTTP, :request, fn _req,
+                                       :get,
+                                       "/videolibrary/90001/transcribing/statistics",
+                                       opts ->
+        assert opts[:params] == %{"dateFrom" => "2025-06-01", "dateTo" => "2025-06-30"}
+        {:ok, %{}}
+      end)
+
+      Bunnyx.VideoLibrary.transcribing_statistics(client, 90_001,
+        date_from: "2025-06-01",
+        date_to: "2025-06-30"
+      )
+    end
+  end
+
   describe "resolve" do
     test "accepts keyword list as client" do
       response = Bunnyx.Factory.video_library_response()
