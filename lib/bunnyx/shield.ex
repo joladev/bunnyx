@@ -331,6 +331,100 @@ defmodule Bunnyx.Shield do
     end
   end
 
+  # -- Bot Detection --
+
+  @doc "Gets the bot detection configuration for a Shield zone."
+  @spec get_bot_detection(Bunnyx.t() | keyword(), pos_integer()) ::
+          {:ok, map()} | {:error, Bunnyx.Error.t()}
+  def get_bot_detection(client, shield_zone_id) do
+    client = Bunnyx.resolve(client)
+
+    case Bunnyx.HTTP.request(
+           client.req,
+           :get,
+           "/shield/shield-zone/#{shield_zone_id}/bot-detection",
+           []
+         ) do
+      {:ok, body} -> {:ok, unwrap_raw_data(body)}
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc """
+  Updates the bot detection configuration for a Shield zone.
+
+  Accepts a map with the full config structure (passed through as JSON).
+  """
+  @spec update_bot_detection(Bunnyx.t() | keyword(), pos_integer(), map()) ::
+          {:ok, map()} | {:error, Bunnyx.Error.t()}
+  def update_bot_detection(client, shield_zone_id, config) do
+    client = Bunnyx.resolve(client)
+
+    json = Map.put(config, "shieldZoneId", shield_zone_id)
+
+    case Bunnyx.HTTP.request(
+           client.req,
+           :patch,
+           "/shield/shield-zone/#{shield_zone_id}/bot-detection",
+           json: json
+         ) do
+      {:ok, body} -> {:ok, unwrap_raw_data(body)}
+      {:error, _} = error -> error
+    end
+  end
+
+  # -- Upload Scanning --
+
+  @doc "Gets the upload scanning configuration for a Shield zone."
+  @spec get_upload_scanning(Bunnyx.t() | keyword(), pos_integer()) ::
+          {:ok, map()} | {:error, Bunnyx.Error.t()}
+  def get_upload_scanning(client, shield_zone_id) do
+    client = Bunnyx.resolve(client)
+
+    case Bunnyx.HTTP.request(
+           client.req,
+           :get,
+           "/shield/shield-zone/#{shield_zone_id}/upload-scanning",
+           []
+         ) do
+      {:ok, body} -> {:ok, unwrap_raw_data(body)}
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc "Updates the upload scanning configuration for a Shield zone."
+  @spec update_upload_scanning(Bunnyx.t() | keyword(), pos_integer(), map()) ::
+          {:ok, map()} | {:error, Bunnyx.Error.t()}
+  def update_upload_scanning(client, shield_zone_id, config) do
+    client = Bunnyx.resolve(client)
+
+    json = Map.put(config, "shieldZoneId", shield_zone_id)
+
+    case Bunnyx.HTTP.request(
+           client.req,
+           :patch,
+           "/shield/shield-zone/#{shield_zone_id}/upload-scanning",
+           json: json
+         ) do
+      {:ok, body} -> {:ok, unwrap_raw_data(body)}
+      {:error, _} = error -> error
+    end
+  end
+
+  # -- DDoS --
+
+  @doc "Lists all DDoS enum mappings."
+  @spec list_ddos_enums(Bunnyx.t() | keyword()) ::
+          {:ok, map()} | {:error, Bunnyx.Error.t()}
+  def list_ddos_enums(client) do
+    client = Bunnyx.resolve(client)
+
+    case Bunnyx.HTTP.request(client.req, :get, "/shield/ddos/enums", []) do
+      {:ok, body} -> {:ok, body}
+      {:error, _} = error -> error
+    end
+  end
+
   # -- Rate Limiting --
 
   @rate_limit_mapping %{

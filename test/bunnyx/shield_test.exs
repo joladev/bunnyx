@@ -322,6 +322,91 @@ defmodule Bunnyx.ShieldTest do
     end
   end
 
+  # -- Bot Detection --
+
+  describe "get_bot_detection/2" do
+    test "returns bot detection config", %{client: client} do
+      response = %{"data" => %{"shieldZoneId" => 100_001, "executionMode" => 0}}
+
+      expect(Bunnyx.HTTP, :request, fn _req,
+                                       :get,
+                                       "/shield/shield-zone/100001/bot-detection",
+                                       _opts ->
+        {:ok, response}
+      end)
+
+      assert {:ok, %{"shieldZoneId" => 100_001}} =
+               Bunnyx.Shield.get_bot_detection(client, 100_001)
+    end
+  end
+
+  describe "update_bot_detection/3" do
+    test "sends config update", %{client: client} do
+      response = %{"data" => %{"executionMode" => 1}}
+
+      expect(Bunnyx.HTTP, :request, fn _req,
+                                       :patch,
+                                       "/shield/shield-zone/100001/bot-detection",
+                                       opts ->
+        assert opts[:json]["shieldZoneId"] == 100_001
+        assert opts[:json]["executionMode"] == 1
+        {:ok, response}
+      end)
+
+      assert {:ok, _} =
+               Bunnyx.Shield.update_bot_detection(client, 100_001, %{"executionMode" => 1})
+    end
+  end
+
+  # -- Upload Scanning --
+
+  describe "get_upload_scanning/2" do
+    test "returns upload scanning config", %{client: client} do
+      response = %{"data" => %{"isEnabled" => true, "antivirusScanningMode" => 1}}
+
+      expect(Bunnyx.HTTP, :request, fn _req,
+                                       :get,
+                                       "/shield/shield-zone/100001/upload-scanning",
+                                       _opts ->
+        {:ok, response}
+      end)
+
+      assert {:ok, %{"isEnabled" => true}} =
+               Bunnyx.Shield.get_upload_scanning(client, 100_001)
+    end
+  end
+
+  describe "update_upload_scanning/3" do
+    test "sends config update", %{client: client} do
+      response = %{"data" => %{"isEnabled" => false}}
+
+      expect(Bunnyx.HTTP, :request, fn _req,
+                                       :patch,
+                                       "/shield/shield-zone/100001/upload-scanning",
+                                       opts ->
+        assert opts[:json]["isEnabled"] == false
+        {:ok, response}
+      end)
+
+      assert {:ok, _} =
+               Bunnyx.Shield.update_upload_scanning(client, 100_001, %{"isEnabled" => false})
+    end
+  end
+
+  # -- DDoS --
+
+  describe "list_ddos_enums/1" do
+    test "returns DDoS enum mappings", %{client: client} do
+      response = %{"sensitivities" => %{}}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :get, "/shield/ddos/enums", _opts ->
+        {:ok, response}
+      end)
+
+      assert {:ok, ^response} = Bunnyx.Shield.list_ddos_enums(client)
+    end
+  end
+
   # -- Rate Limiting --
 
   describe "list_rate_limits/2" do
