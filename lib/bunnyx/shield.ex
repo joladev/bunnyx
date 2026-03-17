@@ -126,6 +126,99 @@ defmodule Bunnyx.Shield do
     end
   end
 
+  # -- API Guardian --
+
+  @doc "Gets the API Guardian configuration and endpoints for a Shield zone."
+  @spec get_api_guardian(Bunnyx.t() | keyword(), pos_integer()) ::
+          {:ok, map()} | {:error, Bunnyx.Error.t()}
+  def get_api_guardian(client, shield_zone_id) do
+    client = Bunnyx.resolve(client)
+
+    case Bunnyx.HTTP.request(
+           client.req,
+           :get,
+           "/shield/shield-zone/#{shield_zone_id}/api-guardian",
+           []
+         ) do
+      {:ok, body} -> {:ok, unwrap_raw_data(body)}
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc "Updates an API Guardian endpoint configuration."
+  @spec update_api_guardian_endpoint(
+          Bunnyx.t() | keyword(),
+          pos_integer(),
+          pos_integer(),
+          keyword()
+        ) ::
+          {:ok, map()} | {:error, Bunnyx.Error.t()}
+  def update_api_guardian_endpoint(client, shield_zone_id, endpoint_id, attrs) do
+    client = Bunnyx.resolve(client)
+
+    json = to_api_guardian_endpoint_body(attrs)
+
+    case Bunnyx.HTTP.request(
+           client.req,
+           :patch,
+           "/shield/shield-zone/#{shield_zone_id}/api-guardian/endpoint/#{endpoint_id}",
+           json: json
+         ) do
+      {:ok, body} -> {:ok, unwrap_raw_data(body)}
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc "Uploads an OpenAPI specification to API Guardian."
+  @spec upload_openapi_spec(Bunnyx.t() | keyword(), pos_integer(), String.t(), keyword()) ::
+          {:ok, map()} | {:error, Bunnyx.Error.t()}
+  def upload_openapi_spec(client, shield_zone_id, content, opts \\ []) do
+    client = Bunnyx.resolve(client)
+
+    json = %{"content" => content}
+
+    json =
+      case Keyword.fetch(opts, :enforce_authorisation_validation) do
+        {:ok, val} -> Map.put(json, "enforceAuthorisationValidation", val)
+        :error -> json
+      end
+
+    case Bunnyx.HTTP.request(
+           client.req,
+           :post,
+           "/shield/shield-zone/#{shield_zone_id}/api-guardian",
+           json: json
+         ) do
+      {:ok, body} -> {:ok, unwrap_raw_data(body)}
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc "Updates an existing OpenAPI specification on API Guardian."
+  @spec update_openapi_spec(Bunnyx.t() | keyword(), pos_integer(), String.t(), keyword()) ::
+          {:ok, map()} | {:error, Bunnyx.Error.t()}
+  def update_openapi_spec(client, shield_zone_id, content, opts \\ []) do
+    client = Bunnyx.resolve(client)
+
+    json = %{"content" => content}
+
+    json =
+      case Keyword.fetch(opts, :enforce_authorisation_validation) do
+        {:ok, val} -> Map.put(json, "enforceAuthorisationValidation", val)
+        :error -> json
+      end
+
+    case Bunnyx.HTTP.request(
+           client.req,
+           :patch,
+           "/shield/shield-zone/#{shield_zone_id}/api-guardian",
+           json: json
+         ) do
+      {:ok, body} -> {:ok, unwrap_raw_data(body)}
+      {:error, _} = error -> error
+    end
+  end
+
   # -- WAF --
 
   @waf_rule_mapping %{
@@ -847,6 +940,19 @@ defmodule Bunnyx.Shield do
   defp to_access_list_config_body(attrs) do
     Map.new(attrs, fn {key, value} ->
       {Map.fetch!(@access_list_config_mapping, key), value}
+    end)
+  end
+
+  @api_guardian_endpoint_mapping %{
+    enabled: "enabled",
+    validate_request_body_schema: "validateRequestBodySchema",
+    validate_response_body_schema: "validateResponseBodySchema",
+    validate_authorization: "validateAuthorization"
+  }
+
+  defp to_api_guardian_endpoint_body(attrs) do
+    Map.new(attrs, fn {key, value} ->
+      {Map.fetch!(@api_guardian_endpoint_mapping, key), value}
     end)
   end
 

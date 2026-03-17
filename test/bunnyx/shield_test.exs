@@ -322,6 +322,81 @@ defmodule Bunnyx.ShieldTest do
     end
   end
 
+  # -- API Guardian --
+
+  describe "get_api_guardian/2" do
+    test "returns API Guardian config", %{client: client} do
+      response = %{"data" => [%{"apiGuardianEndpointId" => 1}]}
+
+      expect(Bunnyx.HTTP, :request, fn _req,
+                                       :get,
+                                       "/shield/shield-zone/100001/api-guardian",
+                                       _opts ->
+        {:ok, response}
+      end)
+
+      assert {:ok, [%{"apiGuardianEndpointId" => 1}]} =
+               Bunnyx.Shield.get_api_guardian(client, 100_001)
+    end
+  end
+
+  describe "update_api_guardian_endpoint/4" do
+    test "sends endpoint config update", %{client: client} do
+      response = %{"data" => %{"enabled" => true}}
+
+      expect(Bunnyx.HTTP, :request, fn _req,
+                                       :patch,
+                                       "/shield/shield-zone/100001/api-guardian/endpoint/1",
+                                       opts ->
+        assert opts[:json] == %{"enabled" => true, "validateRequestBodySchema" => true}
+        {:ok, response}
+      end)
+
+      assert {:ok, _} =
+               Bunnyx.Shield.update_api_guardian_endpoint(client, 100_001, 1,
+                 enabled: true,
+                 validate_request_body_schema: true
+               )
+    end
+  end
+
+  describe "upload_openapi_spec/4" do
+    test "sends OpenAPI spec content", %{client: client} do
+      response = %{"data" => []}
+
+      expect(Bunnyx.HTTP, :request, fn _req,
+                                       :post,
+                                       "/shield/shield-zone/100001/api-guardian",
+                                       opts ->
+        assert opts[:json]["content"] == "{\"openapi\": \"3.0.0\"}"
+        {:ok, response}
+      end)
+
+      assert {:ok, _} =
+               Bunnyx.Shield.upload_openapi_spec(client, 100_001, "{\"openapi\": \"3.0.0\"}")
+    end
+  end
+
+  describe "update_openapi_spec/4" do
+    test "sends updated spec", %{client: client} do
+      response = %{"data" => []}
+
+      expect(Bunnyx.HTTP, :request, fn _req,
+                                       :patch,
+                                       "/shield/shield-zone/100001/api-guardian",
+                                       opts ->
+        assert opts[:json]["content"] == "{\"openapi\": \"3.1.0\"}"
+        assert opts[:json]["enforceAuthorisationValidation"] == true
+        {:ok, response}
+      end)
+
+      assert {:ok, _} =
+               Bunnyx.Shield.update_openapi_spec(client, 100_001, "{\"openapi\": \"3.1.0\"}",
+                 enforce_authorisation_validation: true
+               )
+    end
+  end
+
   # -- Metrics --
 
   describe "metrics_overview/2" do
