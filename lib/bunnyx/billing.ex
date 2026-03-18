@@ -62,6 +62,47 @@ defmodule Bunnyx.Billing do
     end
   end
 
+  @doc "Downloads a billing summary PDF for a billing record."
+  @spec summary_pdf(Bunnyx.t() | keyword(), pos_integer()) ::
+          {:ok, binary()} | {:error, Bunnyx.Error.t()}
+  def summary_pdf(client, billing_record_id) do
+    client = Bunnyx.resolve(client)
+
+    case Bunnyx.HTTP.request(client.req, :get, "/billing/summary/#{billing_record_id}/pdf", []) do
+      {:ok, body} -> {:ok, body}
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc "Downloads a payment request invoice PDF."
+  @spec invoice_pdf(Bunnyx.t() | keyword(), pos_integer()) ::
+          {:ok, binary()} | {:error, Bunnyx.Error.t()}
+  def invoice_pdf(client, payment_request_id) do
+    client = Bunnyx.resolve(client)
+
+    case Bunnyx.HTTP.request(
+           client.req,
+           :get,
+           "/billing/payment-request-invoice/#{payment_request_id}/pdf",
+           []
+         ) do
+      {:ok, body} -> {:ok, body}
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc "Returns pending payment requests."
+  @spec pending_payments(Bunnyx.t() | keyword()) ::
+          {:ok, [map()]} | {:error, Bunnyx.Error.t()}
+  def pending_payments(client) do
+    client = Bunnyx.resolve(client)
+
+    case Bunnyx.HTTP.request(client.req, :get, "/billing/payment-requests", []) do
+      {:ok, body} -> {:ok, body}
+      {:error, _} = error -> error
+    end
+  end
+
   defp from_details_response(data) when is_map(data) do
     for {pascal, atom} <- @details_mapping, Map.has_key?(data, pascal), into: %{} do
       {atom, data[pascal]}

@@ -71,4 +71,43 @@ defmodule Bunnyx.BillingTest do
       assert {:error, ^error} = Bunnyx.Billing.summary(client)
     end
   end
+
+  describe "summary_pdf/2" do
+    test "returns PDF binary", %{client: client} do
+      pdf_data = <<37, 80, 68, 70>>
+
+      expect(Bunnyx.HTTP, :request, fn _req, :get, "/billing/summary/1001/pdf", _opts ->
+        {:ok, pdf_data}
+      end)
+
+      assert {:ok, ^pdf_data} = Bunnyx.Billing.summary_pdf(client, 1001)
+    end
+  end
+
+  describe "invoice_pdf/2" do
+    test "returns PDF binary", %{client: client} do
+      pdf_data = <<37, 80, 68, 70>>
+
+      expect(Bunnyx.HTTP, :request, fn _req,
+                                       :get,
+                                       "/billing/payment-request-invoice/2001/pdf",
+                                       _opts ->
+        {:ok, pdf_data}
+      end)
+
+      assert {:ok, ^pdf_data} = Bunnyx.Billing.invoice_pdf(client, 2001)
+    end
+  end
+
+  describe "pending_payments/1" do
+    test "returns pending payment requests", %{client: client} do
+      response = [%{"Id" => 1, "Amount" => 25.0, "Paid" => false}]
+
+      expect(Bunnyx.HTTP, :request, fn _req, :get, "/billing/payment-requests", _opts ->
+        {:ok, response}
+      end)
+
+      assert {:ok, [%{"Id" => 1, "Paid" => false}]} = Bunnyx.Billing.pending_payments(client)
+    end
+  end
 end
