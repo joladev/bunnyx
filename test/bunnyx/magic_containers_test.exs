@@ -134,4 +134,149 @@ defmodule Bunnyx.MagicContainersTest do
       assert {:ok, %{"cpuUsage" => 0.5}} = Bunnyx.MagicContainers.statistics(client, "app-1")
     end
   end
+
+  # -- Container Registries --
+
+  describe "list_registries/1" do
+    test "returns registries", %{client: client} do
+      response = [%{"id" => 1, "displayName" => "Docker Hub"}]
+
+      expect(Bunnyx.HTTP, :request, fn _req, :get, "/mc/registries", _opts ->
+        {:ok, response}
+      end)
+
+      assert {:ok, [%{"id" => 1}]} = Bunnyx.MagicContainers.list_registries(client)
+    end
+  end
+
+  describe "get_registry/2" do
+    test "returns a registry", %{client: client} do
+      response = %{"id" => 1, "displayName" => "Docker Hub"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :get, "/mc/registries/1", _opts ->
+        {:ok, response}
+      end)
+
+      assert {:ok, %{"id" => 1}} = Bunnyx.MagicContainers.get_registry(client, 1)
+    end
+  end
+
+  describe "add_registry/2" do
+    test "sends config", %{client: client} do
+      config = %{"displayName" => "My Registry", "type" => "DockerHub"}
+      response = %{"id" => 1}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :post, "/mc/registries", opts ->
+        assert opts[:json] == config
+        {:ok, response}
+      end)
+
+      assert {:ok, %{"id" => 1}} = Bunnyx.MagicContainers.add_registry(client, config)
+    end
+  end
+
+  describe "update_registry/3" do
+    test "sends updated config", %{client: client} do
+      response = %{"id" => 1}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :put, "/mc/registries/1", _opts ->
+        {:ok, response}
+      end)
+
+      assert {:ok, _} =
+               Bunnyx.MagicContainers.update_registry(client, 1, %{"displayName" => "Updated"})
+    end
+  end
+
+  describe "delete_registry/2" do
+    test "returns {:ok, nil}", %{client: client} do
+      expect(Bunnyx.HTTP, :request, fn _req, :delete, "/mc/registries/1", _opts ->
+        {:ok, ""}
+      end)
+
+      assert {:ok, nil} = Bunnyx.MagicContainers.delete_registry(client, 1)
+    end
+  end
+
+  describe "list_images/2" do
+    test "returns images", %{client: client} do
+      response = %{"images" => []}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :post, "/mc/registries/images", _opts ->
+        {:ok, response}
+      end)
+
+      assert {:ok, _} = Bunnyx.MagicContainers.list_images(client, %{"registryId" => 1})
+    end
+  end
+
+  describe "search_public_images/2" do
+    test "returns search results", %{client: client} do
+      response = %{"images" => [%{"name" => "nginx"}]}
+
+      expect(Bunnyx.HTTP, :request, fn _req,
+                                       :post,
+                                       "/mc/registries/public-images/search",
+                                       _opts ->
+        {:ok, response}
+      end)
+
+      assert {:ok, _} =
+               Bunnyx.MagicContainers.search_public_images(client, %{"prefix" => "nginx"})
+    end
+  end
+
+  # -- Container Templates --
+
+  describe "add_container/3" do
+    test "sends container config", %{client: client} do
+      config = %{"image" => "nginx:latest"}
+      response = %{"id" => "c-1"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :post, "/mc/apps/app-1/containers", opts ->
+        assert opts[:json] == config
+        {:ok, response}
+      end)
+
+      assert {:ok, %{"id" => "c-1"}} =
+               Bunnyx.MagicContainers.add_container(client, "app-1", config)
+    end
+  end
+
+  describe "get_container/3" do
+    test "returns container", %{client: client} do
+      response = %{"id" => "c-1", "image" => "nginx:latest"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :get, "/mc/apps/app-1/containers/c-1", _opts ->
+        {:ok, response}
+      end)
+
+      assert {:ok, %{"id" => "c-1"}} =
+               Bunnyx.MagicContainers.get_container(client, "app-1", "c-1")
+    end
+  end
+
+  describe "delete_container/3" do
+    test "returns {:ok, nil}", %{client: client} do
+      expect(Bunnyx.HTTP, :request, fn _req, :delete, "/mc/apps/app-1/containers/c-1", _opts ->
+        {:ok, ""}
+      end)
+
+      assert {:ok, nil} = Bunnyx.MagicContainers.delete_container(client, "app-1", "c-1")
+    end
+  end
+
+  describe "set_container_env/4" do
+    test "sends env vars", %{client: client} do
+      env = [%{"name" => "PORT", "value" => "8080"}]
+
+      expect(Bunnyx.HTTP, :request, fn _req, :put, "/mc/apps/app-1/containers/c-1/env", opts ->
+        assert opts[:json] == env
+        {:ok, ""}
+      end)
+
+      assert {:ok, nil} =
+               Bunnyx.MagicContainers.set_container_env(client, "app-1", "c-1", env)
+    end
+  end
 end
