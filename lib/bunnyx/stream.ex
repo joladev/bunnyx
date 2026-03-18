@@ -538,6 +538,145 @@ defmodule Bunnyx.Stream do
     end
   end
 
+  # -- Video actions --
+
+  @doc "Adds an output codec to a video (0 = x264, 1 = vp9, 2 = hevc, 3 = av1)."
+  @spec add_output_codec(t() | keyword(), String.t(), integer()) ::
+          {:ok, nil} | {:error, Bunnyx.Error.t()}
+  def add_output_codec(client, video_id, codec_id) do
+    client = resolve(client)
+
+    case Bunnyx.HTTP.request(
+           client.req,
+           :put,
+           "/library/#{client.library_id}/videos/#{video_id}/outputs/#{codec_id}",
+           []
+         ) do
+      {:ok, _} -> {:ok, nil}
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc """
+  Cleans up unconfigured resolution files from a video.
+
+  ## Options
+
+    * `:dry_run` — if true, returns info without deleting (default false)
+
+  """
+  @spec cleanup_resolutions(t() | keyword(), String.t(), keyword()) ::
+          {:ok, map()} | {:error, Bunnyx.Error.t()}
+  def cleanup_resolutions(client, video_id, opts \\ []) do
+    client = resolve(client)
+    params = if Keyword.get(opts, :dry_run), do: %{"dryRun" => true}, else: %{}
+
+    case Bunnyx.HTTP.request(
+           client.req,
+           :post,
+           "/library/#{client.library_id}/videos/#{video_id}/resolutions/cleanup",
+           params: params
+         ) do
+      {:ok, body} -> {:ok, body}
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc """
+  Repackages a video.
+
+  ## Options
+
+    * `:keep_original_files` — keep originals after repackaging (default true)
+
+  """
+  @spec repackage(t() | keyword(), String.t(), keyword()) ::
+          {:ok, nil} | {:error, Bunnyx.Error.t()}
+  def repackage(client, video_id, opts \\ []) do
+    client = resolve(client)
+
+    params =
+      case Keyword.fetch(opts, :keep_original_files) do
+        {:ok, val} -> %{"keepOriginalFiles" => val}
+        :error -> %{}
+      end
+
+    case Bunnyx.HTTP.request(
+           client.req,
+           :post,
+           "/library/#{client.library_id}/videos/#{video_id}/repackage",
+           params: params
+         ) do
+      {:ok, _} -> {:ok, nil}
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc """
+  Triggers transcription for a video.
+
+  ## Options
+
+    * `:target_languages` — list of ISO 639-1 language codes
+    * `:source_language` — source language code
+    * `:generate_title` — auto-generate title
+    * `:generate_description` — auto-generate description
+    * `:generate_chapters` — auto-generate chapters
+    * `:generate_moments` — auto-generate moments
+    * `:force` — force re-transcription
+
+  """
+  @spec transcribe(t() | keyword(), String.t(), keyword()) ::
+          {:ok, nil} | {:error, Bunnyx.Error.t()}
+  def transcribe(client, video_id, opts \\ []) do
+    client = resolve(client)
+    {force, body_opts} = Keyword.pop(opts, :force)
+    params = if force, do: %{"force" => true}, else: %{}
+    json = to_transcribe_body(body_opts)
+
+    req_opts = [params: params]
+    req_opts = if json == %{}, do: req_opts, else: Keyword.put(req_opts, :json, json)
+
+    case Bunnyx.HTTP.request(
+           client.req,
+           :post,
+           "/library/#{client.library_id}/videos/#{video_id}/transcribe",
+           req_opts
+         ) do
+      {:ok, _} -> {:ok, nil}
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc """
+  Triggers AI-powered smart actions for a video.
+
+  ## Options
+
+    * `:generate_title` — auto-generate title
+    * `:generate_description` — auto-generate description
+    * `:generate_chapters` — auto-generate chapters
+    * `:generate_moments` — auto-generate moments
+    * `:source_language` — source language code
+
+  """
+  @spec smart_actions(t() | keyword(), String.t(), keyword()) ::
+          {:ok, nil} | {:error, Bunnyx.Error.t()}
+  def smart_actions(client, video_id, opts \\ []) do
+    client = resolve(client)
+    json = to_smart_actions_body(opts)
+
+    case Bunnyx.HTTP.request(
+           client.req,
+           :post,
+           "/library/#{client.library_id}/videos/#{video_id}/smart",
+           json: json
+         ) do
+      {:ok, _} -> {:ok, nil}
+      {:error, _} = error -> error
+    end
+  end
+
   @create_mapping %{
     title: "title",
     collection_id: "collectionId",
@@ -601,6 +740,35 @@ defmodule Bunnyx.Stream do
     |> Keyword.take([:page, :items_per_page, :search, :collection, :order_by])
     |> Map.new(fn {key, value} ->
       {Map.fetch!(mapping, key), value}
+    end)
+  end
+
+  @transcribe_mapping %{
+    target_languages: "targetLanguages",
+    source_language: "sourceLanguage",
+    generate_title: "generateTitle",
+    generate_description: "generateDescription",
+    generate_chapters: "generateChapters",
+    generate_moments: "generateMoments"
+  }
+
+  defp to_transcribe_body(opts) do
+    Map.new(opts, fn {key, value} ->
+      {Map.fetch!(@transcribe_mapping, key), value}
+    end)
+  end
+
+  @smart_actions_mapping %{
+    generate_title: "generateTitle",
+    generate_description: "generateDescription",
+    generate_chapters: "generateChapters",
+    generate_moments: "generateMoments",
+    source_language: "sourceLanguage"
+  }
+
+  defp to_smart_actions_body(opts) do
+    Map.new(opts, fn {key, value} ->
+      {Map.fetch!(@smart_actions_mapping, key), value}
     end)
   end
 

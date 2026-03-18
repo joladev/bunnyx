@@ -222,6 +222,80 @@ defmodule Bunnyx.StreamTest do
     end
   end
 
+  # -- Video actions --
+
+  describe "add_output_codec/3" do
+    test "returns {:ok, nil}", %{client: client} do
+      expect(Bunnyx.HTTP, :request, fn _req,
+                                       :put,
+                                       "/library/90001/videos/abc-123/outputs/2",
+                                       _opts ->
+        {:ok, ""}
+      end)
+
+      assert {:ok, nil} = Bunnyx.Stream.add_output_codec(client, "abc-123", 2)
+    end
+  end
+
+  describe "cleanup_resolutions/3" do
+    test "returns cleanup result", %{client: client} do
+      response = %{"deletedFiles" => 3}
+
+      expect(Bunnyx.HTTP, :request, fn _req,
+                                       :post,
+                                       "/library/90001/videos/abc-123/resolutions/cleanup",
+                                       _opts ->
+        {:ok, response}
+      end)
+
+      assert {:ok, %{"deletedFiles" => 3}} = Bunnyx.Stream.cleanup_resolutions(client, "abc-123")
+    end
+  end
+
+  describe "repackage/3" do
+    test "returns {:ok, nil}", %{client: client} do
+      expect(Bunnyx.HTTP, :request, fn _req,
+                                       :post,
+                                       "/library/90001/videos/abc-123/repackage",
+                                       _opts ->
+        {:ok, ""}
+      end)
+
+      assert {:ok, nil} = Bunnyx.Stream.repackage(client, "abc-123")
+    end
+  end
+
+  describe "transcribe/3" do
+    test "sends transcription settings", %{client: client} do
+      expect(Bunnyx.HTTP, :request, fn _req,
+                                       :post,
+                                       "/library/90001/videos/abc-123/transcribe",
+                                       opts ->
+        assert opts[:json]["targetLanguages"] == ["en", "de"]
+        {:ok, ""}
+      end)
+
+      assert {:ok, nil} =
+               Bunnyx.Stream.transcribe(client, "abc-123", target_languages: ["en", "de"])
+    end
+  end
+
+  describe "smart_actions/3" do
+    test "sends smart action settings", %{client: client} do
+      expect(Bunnyx.HTTP, :request, fn _req, :post, "/library/90001/videos/abc-123/smart", opts ->
+        assert opts[:json]["generateTitle"] == true
+        assert opts[:json]["generateChapters"] == true
+        {:ok, ""}
+      end)
+
+      assert {:ok, nil} =
+               Bunnyx.Stream.smart_actions(client, "abc-123",
+                 generate_title: true,
+                 generate_chapters: true
+               )
+    end
+  end
+
   describe "oembed/3" do
     test "returns oEmbed data", %{client: client} do
       response = %{
