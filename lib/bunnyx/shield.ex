@@ -126,6 +126,20 @@ defmodule Bunnyx.Shield do
     end
   end
 
+  # -- Promotions --
+
+  @doc "Gets the current promotion state for your account."
+  @spec get_promotions(Bunnyx.t() | keyword()) ::
+          {:ok, map()} | {:error, Bunnyx.Error.t()}
+  def get_promotions(client) do
+    client = Bunnyx.resolve(client)
+
+    case Bunnyx.HTTP.request(client.req, :get, "/shield/promotions", []) do
+      {:ok, body} -> {:ok, unwrap_raw_data(body)}
+      {:error, _} = error -> error
+    end
+  end
+
   # -- API Guardian --
 
   @doc "Gets the API Guardian configuration and endpoints for a Shield zone."

@@ -283,6 +283,20 @@ defmodule Bunnyx.VideoLibraryTest do
     end
   end
 
+  describe "drm_statistics/3" do
+    test "returns DRM statistics", %{client: client} do
+      response = %{"TotalLicensesIssued" => 100, "LicensesIssuedChart" => %{"2025-06-01" => 50}}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :get, "/videolibrary/90001/drm/statistics", opts ->
+        assert opts[:params] == %{}
+        {:ok, response}
+      end)
+
+      assert {:ok, %{"TotalLicensesIssued" => 100}} =
+               Bunnyx.VideoLibrary.drm_statistics(client, 90_001)
+    end
+  end
+
   describe "resolve" do
     test "accepts keyword list as client" do
       response = Bunnyx.Factory.video_library_response()

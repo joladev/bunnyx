@@ -322,6 +322,20 @@ defmodule Bunnyx.ShieldTest do
     end
   end
 
+  # -- Promotions --
+
+  describe "get_promotions/1" do
+    test "returns promotion state", %{client: client} do
+      response = %{"data" => %{"isActive" => true, "planType" => 1}}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :get, "/shield/promotions", _opts ->
+        {:ok, response}
+      end)
+
+      assert {:ok, %{"isActive" => true}} = Bunnyx.Shield.get_promotions(client)
+    end
+  end
+
   # -- API Guardian --
 
   describe "get_api_guardian/2" do

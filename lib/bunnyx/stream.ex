@@ -420,6 +420,29 @@ defmodule Bunnyx.Stream do
     end
   end
 
+  @doc """
+  Returns oEmbed data for a video URL.
+
+  ## Options
+
+    * `:max_width` — maximum embed width
+    * `:max_height` — maximum embed height
+    * `:token` — authentication token
+    * `:expires` — token expiration timestamp
+
+  """
+  @spec oembed(t() | keyword(), String.t(), keyword()) ::
+          {:ok, map()} | {:error, Bunnyx.Error.t()}
+  def oembed(client, url, opts \\ []) do
+    client = resolve(client)
+    params = Map.merge(%{"url" => url}, to_oembed_params(opts))
+
+    case Bunnyx.HTTP.request(client.req, :get, "/OEmbed", params: params) do
+      {:ok, body} -> {:ok, body}
+      {:error, _} = error -> error
+    end
+  end
+
   @create_mapping %{
     title: "title",
     collection_id: "collectionId",
@@ -481,6 +504,21 @@ defmodule Bunnyx.Stream do
 
     opts
     |> Keyword.take([:page, :items_per_page, :search, :collection, :order_by])
+    |> Map.new(fn {key, value} ->
+      {Map.fetch!(mapping, key), value}
+    end)
+  end
+
+  defp to_oembed_params(opts) do
+    mapping = %{
+      max_width: "maxWidth",
+      max_height: "maxHeight",
+      token: "token",
+      expires: "expires"
+    }
+
+    opts
+    |> Keyword.take([:max_width, :max_height, :token, :expires])
     |> Map.new(fn {key, value} ->
       {Map.fetch!(mapping, key), value}
     end)

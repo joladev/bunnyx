@@ -348,6 +348,33 @@ defmodule Bunnyx.VideoLibrary do
     end
   end
 
+  @doc """
+  Returns DRM statistics for a video library.
+
+  ## Options
+
+    * `:date_from` — start date (ISO 8601 string)
+    * `:date_to` — end date (ISO 8601 string)
+
+  """
+  @spec drm_statistics(Bunnyx.t() | keyword(), pos_integer(), keyword()) ::
+          {:ok, map()} | {:error, Bunnyx.Error.t()}
+  def drm_statistics(client, id, opts \\ []) do
+    client = Bunnyx.resolve(client)
+
+    params =
+      opts
+      |> Keyword.take([:date_from, :date_to])
+      |> to_statistics_params()
+
+    case Bunnyx.HTTP.request(client.req, :get, "/videolibrary/#{id}/drm/statistics",
+           params: params
+         ) do
+      {:ok, body} -> {:ok, body}
+      {:error, _} = error -> error
+    end
+  end
+
   @doc "Lists available languages for transcription and captions."
   @spec languages(Bunnyx.t() | keyword()) :: {:ok, list()} | {:error, Bunnyx.Error.t()}
   def languages(client) do

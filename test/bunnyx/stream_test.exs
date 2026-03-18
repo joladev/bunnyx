@@ -138,6 +138,27 @@ defmodule Bunnyx.StreamTest do
     end
   end
 
+  describe "oembed/3" do
+    test "returns oEmbed data", %{client: client} do
+      response = %{
+        "version" => "1.0",
+        "type" => "video",
+        "title" => "My Video",
+        "html" => "<iframe></iframe>",
+        "width" => 1920,
+        "height" => 1080
+      }
+
+      expect(Bunnyx.HTTP, :request, fn _req, :get, "/OEmbed", opts ->
+        assert opts[:params]["url"] == "https://video.bunnycdn.com/play/90001/abc-123"
+        {:ok, response}
+      end)
+
+      assert {:ok, %{"type" => "video", "title" => "My Video"}} =
+               Bunnyx.Stream.oembed(client, "https://video.bunnycdn.com/play/90001/abc-123")
+    end
+  end
+
   # -- Collections --
 
   describe "list_collections/2" do
