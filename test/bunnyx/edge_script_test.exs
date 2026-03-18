@@ -122,4 +122,162 @@ defmodule Bunnyx.EdgeScriptTest do
       assert {:ok, nil} = Bunnyx.EdgeScript.set_code(client, 1, "export default {}")
     end
   end
+
+  # -- Releases --
+
+  describe "list_releases/3" do
+    test "returns releases", %{client: client} do
+      response = %{"Items" => [%{"Uuid" => "r-1"}]}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :get, "/compute/script/1/releases", _opts ->
+        {:ok, response}
+      end)
+
+      assert {:ok, %{"Items" => _}} = Bunnyx.EdgeScript.list_releases(client, 1)
+    end
+  end
+
+  describe "get_active_release/2" do
+    test "returns active release", %{client: client} do
+      response = %{"Uuid" => "r-1", "Status" => "Active"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :get, "/compute/script/1/releases/active", _opts ->
+        {:ok, response}
+      end)
+
+      assert {:ok, %{"Uuid" => "r-1"}} = Bunnyx.EdgeScript.get_active_release(client, 1)
+    end
+  end
+
+  describe "publish_release/3" do
+    test "returns {:ok, nil}", %{client: client} do
+      expect(Bunnyx.HTTP, :request, fn _req, :post, "/compute/script/1/publish", opts ->
+        assert opts[:json]["Note"] == "v1.0"
+        {:ok, ""}
+      end)
+
+      assert {:ok, nil} = Bunnyx.EdgeScript.publish_release(client, 1, note: "v1.0")
+    end
+  end
+
+  # -- Secrets --
+
+  describe "list_secrets/2" do
+    test "returns secrets", %{client: client} do
+      response = [%{"Name" => "API_KEY"}]
+
+      expect(Bunnyx.HTTP, :request, fn _req, :get, "/compute/script/1/secrets", _opts ->
+        {:ok, response}
+      end)
+
+      assert {:ok, [%{"Name" => "API_KEY"}]} = Bunnyx.EdgeScript.list_secrets(client, 1)
+    end
+  end
+
+  describe "add_secret/4" do
+    test "sends name and secret", %{client: client} do
+      expect(Bunnyx.HTTP, :request, fn _req, :post, "/compute/script/1/secrets", opts ->
+        assert opts[:json] == %{"Name" => "API_KEY", "Secret" => "sk-123"}
+        {:ok, ""}
+      end)
+
+      assert {:ok, nil} = Bunnyx.EdgeScript.add_secret(client, 1, "API_KEY", "sk-123")
+    end
+  end
+
+  describe "upsert_secret/4" do
+    test "sends upsert", %{client: client} do
+      expect(Bunnyx.HTTP, :request, fn _req, :put, "/compute/script/1/secrets", opts ->
+        assert opts[:json] == %{"Name" => "API_KEY", "Secret" => "sk-456"}
+        {:ok, ""}
+      end)
+
+      assert {:ok, nil} = Bunnyx.EdgeScript.upsert_secret(client, 1, "API_KEY", "sk-456")
+    end
+  end
+
+  describe "update_secret/4" do
+    test "sends updated value", %{client: client} do
+      expect(Bunnyx.HTTP, :request, fn _req, :post, "/compute/script/1/secrets/API_KEY", opts ->
+        assert opts[:json] == %{"Secret" => "sk-789"}
+        {:ok, ""}
+      end)
+
+      assert {:ok, nil} = Bunnyx.EdgeScript.update_secret(client, 1, "API_KEY", "sk-789")
+    end
+  end
+
+  describe "delete_secret/3" do
+    test "returns {:ok, nil}", %{client: client} do
+      expect(Bunnyx.HTTP, :request, fn _req, :delete, "/compute/script/1/secrets/42", _opts ->
+        {:ok, ""}
+      end)
+
+      assert {:ok, nil} = Bunnyx.EdgeScript.delete_secret(client, 1, 42)
+    end
+  end
+
+  # -- Variables --
+
+  describe "get_variable/3" do
+    test "returns variable", %{client: client} do
+      response = %{"Name" => "PORT", "DefaultValue" => "8080"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :get, "/compute/script/1/variables/PORT", _opts ->
+        {:ok, response}
+      end)
+
+      assert {:ok, %{"Name" => "PORT"}} = Bunnyx.EdgeScript.get_variable(client, 1, "PORT")
+    end
+  end
+
+  describe "add_variable/3" do
+    test "sends variable attrs", %{client: client} do
+      expect(Bunnyx.HTTP, :request, fn _req, :post, "/compute/script/1/variables/add", opts ->
+        assert opts[:json] == %{"Name" => "PORT", "Required" => true, "DefaultValue" => "8080"}
+        {:ok, ""}
+      end)
+
+      assert {:ok, nil} =
+               Bunnyx.EdgeScript.add_variable(client, 1,
+                 name: "PORT",
+                 required: true,
+                 default_value: "8080"
+               )
+    end
+  end
+
+  describe "upsert_variable/3" do
+    test "sends upsert", %{client: client} do
+      expect(Bunnyx.HTTP, :request, fn _req, :put, "/compute/script/1/variables", opts ->
+        assert opts[:json]["Name"] == "PORT"
+        {:ok, ""}
+      end)
+
+      assert {:ok, nil} =
+               Bunnyx.EdgeScript.upsert_variable(client, 1, name: "PORT", required: true)
+    end
+  end
+
+  describe "update_variable/4" do
+    test "sends updated attrs", %{client: client} do
+      expect(Bunnyx.HTTP, :request, fn _req, :post, "/compute/script/1/variables/42", opts ->
+        assert opts[:json]["DefaultValue"] == "9090"
+        {:ok, ""}
+      end)
+
+      assert {:ok, nil} =
+               Bunnyx.EdgeScript.update_variable(client, 1, 42, default_value: "9090")
+    end
+  end
+
+  describe "delete_variable/3" do
+    test "returns {:ok, nil}", %{client: client} do
+      expect(Bunnyx.HTTP, :request, fn _req, :delete, "/compute/script/1/variables/42", _opts ->
+        {:ok, ""}
+      end)
+
+      assert {:ok, nil} = Bunnyx.EdgeScript.delete_variable(client, 1, 42)
+    end
+  end
 end

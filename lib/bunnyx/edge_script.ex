@@ -177,6 +177,234 @@ defmodule Bunnyx.EdgeScript do
     end
   end
 
+  # -- Releases --
+
+  @doc "Lists published releases for an edge script."
+  @spec list_releases(Bunnyx.t() | keyword(), pos_integer(), keyword()) ::
+          {:ok, map()} | {:error, Bunnyx.Error.t()}
+  def list_releases(client, id, opts \\ []) do
+    client = Bunnyx.resolve(client)
+    params = to_page_params(opts)
+
+    case Bunnyx.HTTP.request(client.req, :get, "/compute/script/#{id}/releases", params: params) do
+      {:ok, body} -> {:ok, body}
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc "Returns the active release for an edge script."
+  @spec get_active_release(Bunnyx.t() | keyword(), pos_integer()) ::
+          {:ok, map()} | {:error, Bunnyx.Error.t()}
+  def get_active_release(client, id) do
+    client = Bunnyx.resolve(client)
+
+    case Bunnyx.HTTP.request(client.req, :get, "/compute/script/#{id}/releases/active", []) do
+      {:ok, body} -> {:ok, body}
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc """
+  Publishes a release for an edge script.
+
+  ## Options
+
+    * `:note` — release note
+    * `:uuid` — specific release UUID to publish
+
+  """
+  @spec publish_release(Bunnyx.t() | keyword(), pos_integer(), keyword()) ::
+          {:ok, nil} | {:error, Bunnyx.Error.t()}
+  def publish_release(client, id, opts \\ []) do
+    client = Bunnyx.resolve(client)
+
+    json =
+      %{}
+      |> maybe_put("Note", opts[:note])
+      |> maybe_put("Uuid", opts[:uuid])
+
+    case Bunnyx.HTTP.request(client.req, :post, "/compute/script/#{id}/publish", json: json) do
+      {:ok, _} -> {:ok, nil}
+      {:error, _} = error -> error
+    end
+  end
+
+  # -- Secrets --
+
+  @doc "Lists secrets for an edge script."
+  @spec list_secrets(Bunnyx.t() | keyword(), pos_integer()) ::
+          {:ok, list()} | {:error, Bunnyx.Error.t()}
+  def list_secrets(client, id) do
+    client = Bunnyx.resolve(client)
+
+    case Bunnyx.HTTP.request(client.req, :get, "/compute/script/#{id}/secrets", []) do
+      {:ok, body} -> {:ok, body}
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc "Adds a secret to an edge script."
+  @spec add_secret(Bunnyx.t() | keyword(), pos_integer(), String.t(), String.t()) ::
+          {:ok, nil} | {:error, Bunnyx.Error.t()}
+  def add_secret(client, id, name, secret) do
+    client = Bunnyx.resolve(client)
+
+    case Bunnyx.HTTP.request(client.req, :post, "/compute/script/#{id}/secrets",
+           json: %{"Name" => name, "Secret" => secret}
+         ) do
+      {:ok, _} -> {:ok, nil}
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc "Adds or updates a secret (upsert)."
+  @spec upsert_secret(Bunnyx.t() | keyword(), pos_integer(), String.t(), String.t()) ::
+          {:ok, nil} | {:error, Bunnyx.Error.t()}
+  def upsert_secret(client, id, name, secret) do
+    client = Bunnyx.resolve(client)
+
+    case Bunnyx.HTTP.request(client.req, :put, "/compute/script/#{id}/secrets",
+           json: %{"Name" => name, "Secret" => secret}
+         ) do
+      {:ok, _} -> {:ok, nil}
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc "Updates an existing secret."
+  @spec update_secret(Bunnyx.t() | keyword(), pos_integer(), String.t(), String.t()) ::
+          {:ok, nil} | {:error, Bunnyx.Error.t()}
+  def update_secret(client, id, name, secret) do
+    client = Bunnyx.resolve(client)
+
+    case Bunnyx.HTTP.request(client.req, :post, "/compute/script/#{id}/secrets/#{name}",
+           json: %{"Secret" => secret}
+         ) do
+      {:ok, _} -> {:ok, nil}
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc "Deletes a secret from an edge script."
+  @spec delete_secret(Bunnyx.t() | keyword(), pos_integer(), pos_integer()) ::
+          {:ok, nil} | {:error, Bunnyx.Error.t()}
+  def delete_secret(client, id, secret_id) do
+    client = Bunnyx.resolve(client)
+
+    case Bunnyx.HTTP.request(
+           client.req,
+           :delete,
+           "/compute/script/#{id}/secrets/#{secret_id}",
+           []
+         ) do
+      {:ok, _} -> {:ok, nil}
+      {:error, _} = error -> error
+    end
+  end
+
+  # -- Variables --
+
+  @doc "Gets a variable by name."
+  @spec get_variable(Bunnyx.t() | keyword(), pos_integer(), String.t()) ::
+          {:ok, map()} | {:error, Bunnyx.Error.t()}
+  def get_variable(client, id, name) do
+    client = Bunnyx.resolve(client)
+
+    case Bunnyx.HTTP.request(client.req, :get, "/compute/script/#{id}/variables/#{name}", []) do
+      {:ok, body} -> {:ok, body}
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc "Adds a variable to an edge script."
+  @spec add_variable(Bunnyx.t() | keyword(), pos_integer(), keyword()) ::
+          {:ok, nil} | {:error, Bunnyx.Error.t()}
+  def add_variable(client, id, attrs) do
+    client = Bunnyx.resolve(client)
+
+    json = to_variable_body(attrs)
+
+    case Bunnyx.HTTP.request(client.req, :post, "/compute/script/#{id}/variables/add", json: json) do
+      {:ok, _} -> {:ok, nil}
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc "Adds or updates a variable (upsert)."
+  @spec upsert_variable(Bunnyx.t() | keyword(), pos_integer(), keyword()) ::
+          {:ok, nil} | {:error, Bunnyx.Error.t()}
+  def upsert_variable(client, id, attrs) do
+    client = Bunnyx.resolve(client)
+
+    json = to_variable_body(attrs)
+
+    case Bunnyx.HTTP.request(client.req, :put, "/compute/script/#{id}/variables", json: json) do
+      {:ok, _} -> {:ok, nil}
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc "Updates an existing variable."
+  @spec update_variable(Bunnyx.t() | keyword(), pos_integer(), pos_integer(), keyword()) ::
+          {:ok, nil} | {:error, Bunnyx.Error.t()}
+  def update_variable(client, id, variable_id, attrs) do
+    client = Bunnyx.resolve(client)
+
+    json = to_variable_body(attrs)
+
+    case Bunnyx.HTTP.request(
+           client.req,
+           :post,
+           "/compute/script/#{id}/variables/#{variable_id}",
+           json: json
+         ) do
+      {:ok, _} -> {:ok, nil}
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc "Deletes a variable from an edge script."
+  @spec delete_variable(Bunnyx.t() | keyword(), pos_integer(), pos_integer()) ::
+          {:ok, nil} | {:error, Bunnyx.Error.t()}
+  def delete_variable(client, id, variable_id) do
+    client = Bunnyx.resolve(client)
+
+    case Bunnyx.HTTP.request(
+           client.req,
+           :delete,
+           "/compute/script/#{id}/variables/#{variable_id}",
+           []
+         ) do
+      {:ok, _} -> {:ok, nil}
+      {:error, _} = error -> error
+    end
+  end
+
+  @variable_mapping %{
+    name: "Name",
+    required: "Required",
+    default_value: "DefaultValue"
+  }
+
+  defp to_variable_body(attrs) do
+    Map.new(attrs, fn {key, value} ->
+      {Map.fetch!(@variable_mapping, key), value}
+    end)
+  end
+
+  defp to_page_params(opts) do
+    mapping = %{page: "page", per_page: "perPage"}
+
+    opts
+    |> Keyword.take([:page, :per_page])
+    |> Map.new(fn {key, value} ->
+      {Map.fetch!(mapping, key), value}
+    end)
+  end
+
+  defp maybe_put(map, _key, nil), do: map
+  defp maybe_put(map, key, value), do: Map.put(map, key, value)
+
   defp to_query_params(opts) do
     mapping = %{page: "page", per_page: "perPage", search: "search", type: "type"}
 
