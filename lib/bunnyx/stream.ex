@@ -443,6 +443,101 @@ defmodule Bunnyx.Stream do
     end
   end
 
+  # -- Video analytics --
+
+  @doc """
+  Returns video statistics for the library or a specific video.
+
+  ## Options
+
+    * `:date_from` — start date (ISO 8601 string)
+    * `:date_to` — end date (ISO 8601 string)
+    * `:hourly` — group by hour instead of day
+    * `:video_guid` — filter by specific video GUID
+
+  """
+  @spec video_statistics(t() | keyword(), keyword()) ::
+          {:ok, map()} | {:error, Bunnyx.Error.t()}
+  def video_statistics(client, opts \\ []) do
+    client = resolve(client)
+    params = to_statistics_params(opts)
+
+    case Bunnyx.HTTP.request(client.req, :get, "/library/#{client.library_id}/statistics",
+           params: params
+         ) do
+      {:ok, body} -> {:ok, body}
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc "Returns player configuration and playback URLs for a video."
+  @spec video_play_data(t() | keyword(), String.t()) ::
+          {:ok, map()} | {:error, Bunnyx.Error.t()}
+  def video_play_data(client, video_id) do
+    client = resolve(client)
+
+    case Bunnyx.HTTP.request(
+           client.req,
+           :get,
+           "/library/#{client.library_id}/videos/#{video_id}/play",
+           []
+         ) do
+      {:ok, body} -> {:ok, body}
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc "Returns raw heatmap data for a video."
+  @spec video_heatmap_data(t() | keyword(), String.t()) ::
+          {:ok, map()} | {:error, Bunnyx.Error.t()}
+  def video_heatmap_data(client, video_id) do
+    client = resolve(client)
+
+    case Bunnyx.HTTP.request(
+           client.req,
+           :get,
+           "/library/#{client.library_id}/videos/#{video_id}/play/heatmap",
+           []
+         ) do
+      {:ok, body} -> {:ok, body}
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc "Returns storage size breakdown for a video."
+  @spec video_storage_info(t() | keyword(), String.t()) ::
+          {:ok, map()} | {:error, Bunnyx.Error.t()}
+  def video_storage_info(client, video_id) do
+    client = resolve(client)
+
+    case Bunnyx.HTTP.request(
+           client.req,
+           :get,
+           "/library/#{client.library_id}/videos/#{video_id}/storage",
+           []
+         ) do
+      {:ok, body} -> {:ok, body}
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc "Returns resolution availability and encoding info for a video."
+  @spec video_resolutions(t() | keyword(), String.t()) ::
+          {:ok, map()} | {:error, Bunnyx.Error.t()}
+  def video_resolutions(client, video_id) do
+    client = resolve(client)
+
+    case Bunnyx.HTTP.request(
+           client.req,
+           :get,
+           "/library/#{client.library_id}/videos/#{video_id}/resolutions",
+           []
+         ) do
+      {:ok, body} -> {:ok, body}
+      {:error, _} = error -> error
+    end
+  end
+
   @create_mapping %{
     title: "title",
     collection_id: "collectionId",
@@ -504,6 +599,21 @@ defmodule Bunnyx.Stream do
 
     opts
     |> Keyword.take([:page, :items_per_page, :search, :collection, :order_by])
+    |> Map.new(fn {key, value} ->
+      {Map.fetch!(mapping, key), value}
+    end)
+  end
+
+  defp to_statistics_params(opts) do
+    mapping = %{
+      date_from: "dateFrom",
+      date_to: "dateTo",
+      hourly: "hourly",
+      video_guid: "videoGuid"
+    }
+
+    opts
+    |> Keyword.take([:date_from, :date_to, :hourly, :video_guid])
     |> Map.new(fn {key, value} ->
       {Map.fetch!(mapping, key), value}
     end)

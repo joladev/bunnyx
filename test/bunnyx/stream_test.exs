@@ -138,6 +138,90 @@ defmodule Bunnyx.StreamTest do
     end
   end
 
+  # -- Video analytics --
+
+  describe "video_statistics/2" do
+    test "returns library statistics", %{client: client} do
+      response = %{"viewsChart" => %{"2025-06-01" => 100}, "watchTimeChart" => %{}}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :get, "/library/90001/statistics", opts ->
+        assert opts[:params] == %{}
+        {:ok, response}
+      end)
+
+      assert {:ok, %{"viewsChart" => _}} = Bunnyx.Stream.video_statistics(client)
+    end
+
+    test "passes filter params", %{client: client} do
+      response = %{"viewsChart" => %{}}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :get, "/library/90001/statistics", opts ->
+        assert opts[:params]["videoGuid"] == "abc-123"
+        assert opts[:params]["hourly"] == true
+        {:ok, response}
+      end)
+
+      Bunnyx.Stream.video_statistics(client, video_guid: "abc-123", hourly: true)
+    end
+  end
+
+  describe "video_play_data/2" do
+    test "returns play data", %{client: client} do
+      response = %{"videoPlaylistUrl" => "https://example.com/playlist.m3u8"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :get, "/library/90001/videos/abc-123/play", _opts ->
+        {:ok, response}
+      end)
+
+      assert {:ok, %{"videoPlaylistUrl" => _}} = Bunnyx.Stream.video_play_data(client, "abc-123")
+    end
+  end
+
+  describe "video_heatmap_data/2" do
+    test "returns raw heatmap data", %{client: client} do
+      response = %{"data" => [0.1, 0.5, 0.8]}
+
+      expect(Bunnyx.HTTP, :request, fn _req,
+                                       :get,
+                                       "/library/90001/videos/abc-123/play/heatmap",
+                                       _opts ->
+        {:ok, response}
+      end)
+
+      assert {:ok, _} = Bunnyx.Stream.video_heatmap_data(client, "abc-123")
+    end
+  end
+
+  describe "video_storage_info/2" do
+    test "returns storage breakdown", %{client: client} do
+      response = %{"data" => %{"thumbnails" => 1024, "originals" => 52_428_800}}
+
+      expect(Bunnyx.HTTP, :request, fn _req,
+                                       :get,
+                                       "/library/90001/videos/abc-123/storage",
+                                       _opts ->
+        {:ok, response}
+      end)
+
+      assert {:ok, _} = Bunnyx.Stream.video_storage_info(client, "abc-123")
+    end
+  end
+
+  describe "video_resolutions/2" do
+    test "returns resolution info", %{client: client} do
+      response = %{"availableResolutions" => ["720p", "1080p"]}
+
+      expect(Bunnyx.HTTP, :request, fn _req,
+                                       :get,
+                                       "/library/90001/videos/abc-123/resolutions",
+                                       _opts ->
+        {:ok, response}
+      end)
+
+      assert {:ok, _} = Bunnyx.Stream.video_resolutions(client, "abc-123")
+    end
+  end
+
   describe "oembed/3" do
     test "returns oEmbed data", %{client: client} do
       response = %{
