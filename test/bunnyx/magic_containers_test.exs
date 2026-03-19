@@ -279,4 +279,206 @@ defmodule Bunnyx.MagicContainersTest do
                Bunnyx.MagicContainers.set_container_env(client, "app-1", "c-1", env)
     end
   end
+
+  # -- Endpoints --
+
+  describe "list_endpoints/2" do
+    test "returns endpoints", %{client: client} do
+      response = [%{"id" => "ep-1", "type" => "CDN"}]
+
+      expect(Bunnyx.HTTP, :request, fn _req, :get, "/mc/apps/app-1/endpoints", _opts ->
+        {:ok, response}
+      end)
+
+      assert {:ok, [%{"id" => "ep-1"}]} = Bunnyx.MagicContainers.list_endpoints(client, "app-1")
+    end
+  end
+
+  describe "add_endpoint/4" do
+    test "sends config", %{client: client} do
+      config = %{"type" => "CDN"}
+      response = %{"id" => "ep-1"}
+
+      expect(Bunnyx.HTTP, :request, fn _req,
+                                       :post,
+                                       "/mc/apps/app-1/containers/c-1/endpoints",
+                                       opts ->
+        assert opts[:json] == config
+        {:ok, response}
+      end)
+
+      assert {:ok, _} = Bunnyx.MagicContainers.add_endpoint(client, "app-1", "c-1", config)
+    end
+  end
+
+  describe "delete_endpoint/3" do
+    test "returns {:ok, nil}", %{client: client} do
+      expect(Bunnyx.HTTP, :request, fn _req, :delete, "/mc/apps/app-1/endpoints/ep-1", _opts ->
+        {:ok, ""}
+      end)
+
+      assert {:ok, nil} = Bunnyx.MagicContainers.delete_endpoint(client, "app-1", "ep-1")
+    end
+  end
+
+  # -- Autoscaling --
+
+  describe "get_autoscaling/2" do
+    test "returns autoscaling config", %{client: client} do
+      response = %{"minReplicas" => 1, "maxReplicas" => 5}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :get, "/mc/apps/app-1/autoscaling", _opts ->
+        {:ok, response}
+      end)
+
+      assert {:ok, %{"minReplicas" => 1}} =
+               Bunnyx.MagicContainers.get_autoscaling(client, "app-1")
+    end
+  end
+
+  describe "update_autoscaling/3" do
+    test "sends config", %{client: client} do
+      response = %{"minReplicas" => 2}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :put, "/mc/apps/app-1/autoscaling", opts ->
+        assert opts[:json]["minReplicas"] == 2
+        {:ok, response}
+      end)
+
+      assert {:ok, _} =
+               Bunnyx.MagicContainers.update_autoscaling(client, "app-1", %{"minReplicas" => 2})
+    end
+  end
+
+  # -- Regions --
+
+  describe "list_regions/1" do
+    test "returns regions", %{client: client} do
+      response = [%{"code" => "DE", "name" => "Frankfurt"}]
+
+      expect(Bunnyx.HTTP, :request, fn _req, :get, "/mc/regions", _opts ->
+        {:ok, response}
+      end)
+
+      assert {:ok, [%{"code" => "DE"}]} = Bunnyx.MagicContainers.list_regions(client)
+    end
+  end
+
+  describe "get_optimal_region/2" do
+    test "returns optimal region", %{client: client} do
+      response = %{"regionCode" => "DE"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :get, "/mc/regions/optimal", opts ->
+        assert opts[:params]["cdnServerToken"] == "tok-123"
+        {:ok, response}
+      end)
+
+      assert {:ok, _} = Bunnyx.MagicContainers.get_optimal_region(client, "tok-123")
+    end
+  end
+
+  # -- Volumes --
+
+  describe "list_volumes/2" do
+    test "returns volumes", %{client: client} do
+      response = [%{"id" => "vol-1"}]
+
+      expect(Bunnyx.HTTP, :request, fn _req, :get, "/mc/apps/app-1/volumes", _opts ->
+        {:ok, response}
+      end)
+
+      assert {:ok, [%{"id" => "vol-1"}]} = Bunnyx.MagicContainers.list_volumes(client, "app-1")
+    end
+  end
+
+  describe "detach_volume/3" do
+    test "returns {:ok, nil}", %{client: client} do
+      expect(Bunnyx.HTTP, :request, fn _req,
+                                       :post,
+                                       "/mc/apps/app-1/volumes/vol-1/detach",
+                                       _opts ->
+        {:ok, ""}
+      end)
+
+      assert {:ok, nil} = Bunnyx.MagicContainers.detach_volume(client, "app-1", "vol-1")
+    end
+  end
+
+  # -- Nodes --
+
+  describe "list_nodes/2" do
+    test "returns nodes", %{client: client} do
+      response = %{"data" => [%{"ip" => "1.2.3.4"}]}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :get, "/mc/nodes", _opts ->
+        {:ok, response}
+      end)
+
+      assert {:ok, _} = Bunnyx.MagicContainers.list_nodes(client)
+    end
+  end
+
+  # -- Pods --
+
+  describe "recreate_pod/3" do
+    test "returns {:ok, nil}", %{client: client} do
+      expect(Bunnyx.HTTP, :request, fn _req, :post, "/mc/apps/app-1/pods/pod-1/recreate", _opts ->
+        {:ok, ""}
+      end)
+
+      assert {:ok, nil} = Bunnyx.MagicContainers.recreate_pod(client, "app-1", "pod-1")
+    end
+  end
+
+  # -- Limits --
+
+  describe "get_limits/1" do
+    test "returns user limits", %{client: client} do
+      response = %{"maxApps" => 10, "currentApps" => 3}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :get, "/mc/limits", _opts ->
+        {:ok, response}
+      end)
+
+      assert {:ok, %{"maxApps" => 10}} = Bunnyx.MagicContainers.get_limits(client)
+    end
+  end
+
+  # -- Log Forwarding --
+
+  describe "list_log_forwarding/1" do
+    test "returns configs", %{client: client} do
+      response = [%{"id" => "lf-1"}]
+
+      expect(Bunnyx.HTTP, :request, fn _req, :get, "/mc/log/forwarding", _opts ->
+        {:ok, response}
+      end)
+
+      assert {:ok, [%{"id" => "lf-1"}]} = Bunnyx.MagicContainers.list_log_forwarding(client)
+    end
+  end
+
+  describe "create_log_forwarding/2" do
+    test "sends config", %{client: client} do
+      config = %{"type" => "http", "url" => "https://logs.example.com"}
+      response = %{"id" => "lf-1"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :post, "/mc/log/forwarding", opts ->
+        assert opts[:json] == config
+        {:ok, response}
+      end)
+
+      assert {:ok, _} = Bunnyx.MagicContainers.create_log_forwarding(client, config)
+    end
+  end
+
+  describe "delete_log_forwarding/2" do
+    test "returns {:ok, nil}", %{client: client} do
+      expect(Bunnyx.HTTP, :request, fn _req, :delete, "/mc/log/forwarding/lf-1", _opts ->
+        {:ok, ""}
+      end)
+
+      assert {:ok, nil} = Bunnyx.MagicContainers.delete_log_forwarding(client, "lf-1")
+    end
+  end
 end

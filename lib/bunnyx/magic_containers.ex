@@ -350,6 +350,339 @@ defmodule Bunnyx.MagicContainers do
     end
   end
 
+  # -- Endpoints --
+
+  @doc "Lists endpoints for all containers in an application."
+  @spec list_endpoints(Bunnyx.t() | keyword(), String.t()) ::
+          {:ok, list()} | {:error, Bunnyx.Error.t()}
+  def list_endpoints(client, app_id) do
+    client = Bunnyx.resolve(client)
+
+    case Bunnyx.HTTP.request(client.req, :get, "/mc/apps/#{app_id}/endpoints", []) do
+      {:ok, body} -> {:ok, body}
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc "Adds an endpoint to a container."
+  @spec add_endpoint(Bunnyx.t() | keyword(), String.t(), String.t(), map()) ::
+          {:ok, map()} | {:error, Bunnyx.Error.t()}
+  def add_endpoint(client, app_id, container_id, config) do
+    client = Bunnyx.resolve(client)
+
+    case Bunnyx.HTTP.request(
+           client.req,
+           :post,
+           "/mc/apps/#{app_id}/containers/#{container_id}/endpoints",
+           json: config
+         ) do
+      {:ok, body} -> {:ok, body}
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc "Updates an endpoint."
+  @spec update_endpoint(Bunnyx.t() | keyword(), String.t(), String.t(), map()) ::
+          {:ok, map()} | {:error, Bunnyx.Error.t()}
+  def update_endpoint(client, app_id, endpoint_id, config) do
+    client = Bunnyx.resolve(client)
+
+    case Bunnyx.HTTP.request(
+           client.req,
+           :put,
+           "/mc/apps/#{app_id}/endpoints/#{endpoint_id}",
+           json: config
+         ) do
+      {:ok, body} -> {:ok, body}
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc "Deletes an endpoint."
+  @spec delete_endpoint(Bunnyx.t() | keyword(), String.t(), String.t()) ::
+          {:ok, nil} | {:error, Bunnyx.Error.t()}
+  def delete_endpoint(client, app_id, endpoint_id) do
+    client = Bunnyx.resolve(client)
+
+    case Bunnyx.HTTP.request(
+           client.req,
+           :delete,
+           "/mc/apps/#{app_id}/endpoints/#{endpoint_id}",
+           []
+         ) do
+      {:ok, _} -> {:ok, nil}
+      {:error, _} = error -> error
+    end
+  end
+
+  # -- Autoscaling --
+
+  @doc "Gets autoscaling settings for an application."
+  @spec get_autoscaling(Bunnyx.t() | keyword(), String.t()) ::
+          {:ok, map()} | {:error, Bunnyx.Error.t()}
+  def get_autoscaling(client, app_id) do
+    client = Bunnyx.resolve(client)
+
+    case Bunnyx.HTTP.request(client.req, :get, "/mc/apps/#{app_id}/autoscaling", []) do
+      {:ok, body} -> {:ok, body}
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc "Updates autoscaling settings for an application."
+  @spec update_autoscaling(Bunnyx.t() | keyword(), String.t(), map()) ::
+          {:ok, map()} | {:error, Bunnyx.Error.t()}
+  def update_autoscaling(client, app_id, config) do
+    client = Bunnyx.resolve(client)
+
+    case Bunnyx.HTTP.request(client.req, :put, "/mc/apps/#{app_id}/autoscaling", json: config) do
+      {:ok, body} -> {:ok, body}
+      {:error, _} = error -> error
+    end
+  end
+
+  # -- Regions --
+
+  @doc "Lists all available deployment regions."
+  @spec list_regions(Bunnyx.t() | keyword()) :: {:ok, list()} | {:error, Bunnyx.Error.t()}
+  def list_regions(client) do
+    client = Bunnyx.resolve(client)
+
+    case Bunnyx.HTTP.request(client.req, :get, "/mc/regions", []) do
+      {:ok, body} -> {:ok, body}
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc "Gets the optimal base region based on CDN server token."
+  @spec get_optimal_region(Bunnyx.t() | keyword(), String.t()) ::
+          {:ok, map()} | {:error, Bunnyx.Error.t()}
+  def get_optimal_region(client, cdn_server_token) do
+    client = Bunnyx.resolve(client)
+
+    case Bunnyx.HTTP.request(client.req, :get, "/mc/regions/optimal",
+           params: %{"cdnServerToken" => cdn_server_token}
+         ) do
+      {:ok, body} -> {:ok, body}
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc "Gets region settings for an application."
+  @spec get_region_settings(Bunnyx.t() | keyword(), String.t()) ::
+          {:ok, map()} | {:error, Bunnyx.Error.t()}
+  def get_region_settings(client, app_id) do
+    client = Bunnyx.resolve(client)
+
+    case Bunnyx.HTTP.request(client.req, :get, "/mc/apps/#{app_id}/regions", []) do
+      {:ok, body} -> {:ok, body}
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc "Updates region settings for an application."
+  @spec update_region_settings(Bunnyx.t() | keyword(), String.t(), map()) ::
+          {:ok, map()} | {:error, Bunnyx.Error.t()}
+  def update_region_settings(client, app_id, config) do
+    client = Bunnyx.resolve(client)
+
+    case Bunnyx.HTTP.request(client.req, :put, "/mc/apps/#{app_id}/regions", json: config) do
+      {:ok, body} -> {:ok, body}
+      {:error, _} = error -> error
+    end
+  end
+
+  # -- Volumes --
+
+  @doc "Lists volumes for an application."
+  @spec list_volumes(Bunnyx.t() | keyword(), String.t()) ::
+          {:ok, list()} | {:error, Bunnyx.Error.t()}
+  def list_volumes(client, app_id) do
+    client = Bunnyx.resolve(client)
+
+    case Bunnyx.HTTP.request(client.req, :get, "/mc/apps/#{app_id}/volumes", []) do
+      {:ok, body} -> {:ok, body}
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc "Updates a volume."
+  @spec update_volume(Bunnyx.t() | keyword(), String.t(), String.t(), map()) ::
+          {:ok, map()} | {:error, Bunnyx.Error.t()}
+  def update_volume(client, app_id, volume_id, config) do
+    client = Bunnyx.resolve(client)
+
+    case Bunnyx.HTTP.request(
+           client.req,
+           :put,
+           "/mc/apps/#{app_id}/volumes/#{volume_id}",
+           json: config
+         ) do
+      {:ok, body} -> {:ok, body}
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc "Detaches a volume from its container."
+  @spec detach_volume(Bunnyx.t() | keyword(), String.t(), String.t()) ::
+          {:ok, nil} | {:error, Bunnyx.Error.t()}
+  def detach_volume(client, app_id, volume_id) do
+    client = Bunnyx.resolve(client)
+
+    case Bunnyx.HTTP.request(
+           client.req,
+           :post,
+           "/mc/apps/#{app_id}/volumes/#{volume_id}/detach",
+           []
+         ) do
+      {:ok, _} -> {:ok, nil}
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc "Deletes a specific volume instance."
+  @spec delete_volume_instance(Bunnyx.t() | keyword(), String.t(), String.t(), String.t()) ::
+          {:ok, nil} | {:error, Bunnyx.Error.t()}
+  def delete_volume_instance(client, app_id, volume_id, instance_id) do
+    client = Bunnyx.resolve(client)
+
+    case Bunnyx.HTTP.request(
+           client.req,
+           :delete,
+           "/mc/apps/#{app_id}/volumes/#{volume_id}/instances/#{instance_id}",
+           []
+         ) do
+      {:ok, _} -> {:ok, nil}
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc "Deletes all instances of a volume."
+  @spec delete_all_volume_instances(Bunnyx.t() | keyword(), String.t(), String.t()) ::
+          {:ok, nil} | {:error, Bunnyx.Error.t()}
+  def delete_all_volume_instances(client, app_id, volume_id) do
+    client = Bunnyx.resolve(client)
+
+    case Bunnyx.HTTP.request(
+           client.req,
+           :delete,
+           "/mc/apps/#{app_id}/volumes/#{volume_id}/instances",
+           []
+         ) do
+      {:ok, _} -> {:ok, nil}
+      {:error, _} = error -> error
+    end
+  end
+
+  # -- Nodes --
+
+  @doc "Lists all node IP addresses in the Magic Containers network."
+  @spec list_nodes(Bunnyx.t() | keyword(), keyword()) ::
+          {:ok, map()} | {:error, Bunnyx.Error.t()}
+  def list_nodes(client, opts \\ []) do
+    client = Bunnyx.resolve(client)
+    params = to_list_params(opts)
+
+    case Bunnyx.HTTP.request(client.req, :get, "/mc/nodes", params: params) do
+      {:ok, body} -> {:ok, body}
+      {:error, _} = error -> error
+    end
+  end
+
+  # -- Pods --
+
+  @doc "Recreates a pod (deletes and re-creates it)."
+  @spec recreate_pod(Bunnyx.t() | keyword(), String.t(), String.t()) ::
+          {:ok, nil} | {:error, Bunnyx.Error.t()}
+  def recreate_pod(client, app_id, pod_id) do
+    client = Bunnyx.resolve(client)
+
+    case Bunnyx.HTTP.request(
+           client.req,
+           :post,
+           "/mc/apps/#{app_id}/pods/#{pod_id}/recreate",
+           []
+         ) do
+      {:ok, _} -> {:ok, nil}
+      {:error, _} = error -> error
+    end
+  end
+
+  # -- Limits --
+
+  @doc "Gets resource limits and usage for the authenticated user."
+  @spec get_limits(Bunnyx.t() | keyword()) :: {:ok, map()} | {:error, Bunnyx.Error.t()}
+  def get_limits(client) do
+    client = Bunnyx.resolve(client)
+
+    case Bunnyx.HTTP.request(client.req, :get, "/mc/limits", []) do
+      {:ok, body} -> {:ok, body}
+      {:error, _} = error -> error
+    end
+  end
+
+  # -- Log Forwarding --
+
+  @doc "Lists log forwarding configurations."
+  @spec list_log_forwarding(Bunnyx.t() | keyword()) ::
+          {:ok, list()} | {:error, Bunnyx.Error.t()}
+  def list_log_forwarding(client) do
+    client = Bunnyx.resolve(client)
+
+    case Bunnyx.HTTP.request(client.req, :get, "/mc/log/forwarding", []) do
+      {:ok, body} -> {:ok, body}
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc "Gets a log forwarding configuration."
+  @spec get_log_forwarding(Bunnyx.t() | keyword(), String.t()) ::
+          {:ok, map()} | {:error, Bunnyx.Error.t()}
+  def get_log_forwarding(client, config_id) do
+    client = Bunnyx.resolve(client)
+
+    case Bunnyx.HTTP.request(client.req, :get, "/mc/log/forwarding/#{config_id}", []) do
+      {:ok, body} -> {:ok, body}
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc "Creates a log forwarding configuration."
+  @spec create_log_forwarding(Bunnyx.t() | keyword(), map()) ::
+          {:ok, map()} | {:error, Bunnyx.Error.t()}
+  def create_log_forwarding(client, config) do
+    client = Bunnyx.resolve(client)
+
+    case Bunnyx.HTTP.request(client.req, :post, "/mc/log/forwarding", json: config) do
+      {:ok, body} -> {:ok, body}
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc "Updates a log forwarding configuration."
+  @spec update_log_forwarding(Bunnyx.t() | keyword(), String.t(), map()) ::
+          {:ok, map()} | {:error, Bunnyx.Error.t()}
+  def update_log_forwarding(client, config_id, config) do
+    client = Bunnyx.resolve(client)
+
+    case Bunnyx.HTTP.request(client.req, :put, "/mc/log/forwarding/#{config_id}", json: config) do
+      {:ok, body} -> {:ok, body}
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc "Deletes a log forwarding configuration."
+  @spec delete_log_forwarding(Bunnyx.t() | keyword(), String.t()) ::
+          {:ok, nil} | {:error, Bunnyx.Error.t()}
+  def delete_log_forwarding(client, config_id) do
+    client = Bunnyx.resolve(client)
+
+    case Bunnyx.HTTP.request(client.req, :delete, "/mc/log/forwarding/#{config_id}", []) do
+      {:ok, _} -> {:ok, nil}
+      {:error, _} = error -> error
+    end
+  end
+
   defp to_list_params(opts) do
     mapping = %{limit: "limit", next_cursor: "nextCursor"}
 
