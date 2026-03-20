@@ -313,10 +313,7 @@ defmodule Bunnyx.DnsZone do
   end
 
   defp to_request_body(attrs) do
-    Map.new(attrs, fn {key, value} ->
-      pascal = Map.fetch!(@reverse_mapping, key)
-      {pascal, value}
-    end)
+    Bunnyx.Params.map_keys!(attrs, @reverse_mapping)
   end
 
   defp to_statistics_params(opts) do

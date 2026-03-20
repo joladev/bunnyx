@@ -87,10 +87,7 @@ defmodule Bunnyx.EdgeScript do
   def create(client, attrs) do
     client = Bunnyx.resolve(client)
 
-    json =
-      Map.new(attrs, fn {key, value} ->
-        {Map.fetch!(@create_mapping, key), value}
-      end)
+    json = Bunnyx.Params.map_keys!(attrs, @create_mapping)
 
     case Bunnyx.HTTP.request(client.req, :post, "/compute/script", json: json) do
       {:ok, body} -> {:ok, body}
@@ -104,10 +101,7 @@ defmodule Bunnyx.EdgeScript do
   def update(client, id, attrs) do
     client = Bunnyx.resolve(client)
 
-    json =
-      Map.new(attrs, fn {key, value} ->
-        {Map.fetch!(@create_mapping, key), value}
-      end)
+    json = Bunnyx.Params.map_keys!(attrs, @create_mapping)
 
     case Bunnyx.HTTP.request(client.req, :post, "/compute/script/#{id}", json: json) do
       {:ok, body} -> {:ok, body}
@@ -387,9 +381,7 @@ defmodule Bunnyx.EdgeScript do
   }
 
   defp to_variable_body(attrs) do
-    Map.new(attrs, fn {key, value} ->
-      {Map.fetch!(@variable_mapping, key), value}
-    end)
+    Bunnyx.Params.map_keys!(attrs, @variable_mapping)
   end
 
   defp to_page_params(opts) do

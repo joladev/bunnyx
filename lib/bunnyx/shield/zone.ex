@@ -91,9 +91,6 @@ defmodule Bunnyx.Shield.Zone do
   @doc false
   @spec to_request_body(keyword()) :: map()
   def to_request_body(attrs) do
-    Map.new(attrs, fn {key, value} ->
-      camel = Map.fetch!(@reverse_mapping, key)
-      {camel, value}
-    end)
+    Bunnyx.Params.map_keys!(attrs, @reverse_mapping)
   end
 end

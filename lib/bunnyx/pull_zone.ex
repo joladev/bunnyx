@@ -393,10 +393,7 @@ defmodule Bunnyx.PullZone do
   def add_or_update_edge_rule(client, id, attrs) do
     client = Bunnyx.resolve(client)
 
-    json =
-      Map.new(attrs, fn {key, value} ->
-        {Map.fetch!(@edge_rule_mapping, key), value}
-      end)
+    json = Bunnyx.Params.map_keys!(attrs, @edge_rule_mapping)
 
     case Bunnyx.HTTP.request(client.req, :post, "/pullzone/#{id}/edgerules/addOrUpdate",
            json: json
@@ -580,10 +577,7 @@ defmodule Bunnyx.PullZone do
   end
 
   defp to_request_body(attrs) do
-    Map.new(attrs, fn {key, value} ->
-      pascal = Map.fetch!(@reverse_mapping, key)
-      {pascal, value}
-    end)
+    Bunnyx.Params.map_keys!(attrs, @reverse_mapping)
   end
 
   defp to_statistics_params(opts) do

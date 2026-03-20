@@ -729,10 +729,7 @@ defmodule Bunnyx.Shield do
   def create_rate_limit(client, attrs) do
     client = Bunnyx.resolve(client)
 
-    json =
-      Map.new(attrs, fn {key, value} ->
-        {Map.fetch!(@rate_limit_mapping, key), value}
-      end)
+    json = Bunnyx.Params.map_keys!(attrs, @rate_limit_mapping)
 
     case Bunnyx.HTTP.request(client.req, :post, "/shield/rate-limit", json: json) do
       {:ok, body} -> {:ok, unwrap_raw_data(body)}
@@ -746,10 +743,7 @@ defmodule Bunnyx.Shield do
   def update_rate_limit(client, rate_limit_id, attrs) do
     client = Bunnyx.resolve(client)
 
-    json =
-      Map.new(attrs, fn {key, value} ->
-        {Map.fetch!(@rate_limit_mapping, key), value}
-      end)
+    json = Bunnyx.Params.map_keys!(attrs, @rate_limit_mapping)
 
     case Bunnyx.HTTP.request(client.req, :patch, "/shield/rate-limit/#{rate_limit_id}",
            json: json
@@ -930,9 +924,7 @@ defmodule Bunnyx.Shield do
   defp unwrap_raw_data(body), do: body
 
   defp to_waf_body(attrs) do
-    Map.new(attrs, fn {key, value} ->
-      {Map.fetch!(@waf_rule_mapping, key), value}
-    end)
+    Bunnyx.Params.map_keys!(attrs, @waf_rule_mapping)
   end
 
   @access_list_mapping %{
@@ -944,17 +936,13 @@ defmodule Bunnyx.Shield do
   }
 
   defp to_access_list_body(attrs) do
-    Map.new(attrs, fn {key, value} ->
-      {Map.fetch!(@access_list_mapping, key), value}
-    end)
+    Bunnyx.Params.map_keys!(attrs, @access_list_mapping)
   end
 
   @access_list_config_mapping %{is_enabled: "isEnabled", action: "action"}
 
   defp to_access_list_config_body(attrs) do
-    Map.new(attrs, fn {key, value} ->
-      {Map.fetch!(@access_list_config_mapping, key), value}
-    end)
+    Bunnyx.Params.map_keys!(attrs, @access_list_config_mapping)
   end
 
   @api_guardian_endpoint_mapping %{
@@ -965,9 +953,7 @@ defmodule Bunnyx.Shield do
   }
 
   defp to_api_guardian_endpoint_body(attrs) do
-    Map.new(attrs, fn {key, value} ->
-      {Map.fetch!(@api_guardian_endpoint_mapping, key), value}
-    end)
+    Bunnyx.Params.map_keys!(attrs, @api_guardian_endpoint_mapping)
   end
 
   defp to_metrics_params(opts) do

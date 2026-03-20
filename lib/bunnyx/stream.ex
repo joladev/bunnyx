@@ -684,9 +684,7 @@ defmodule Bunnyx.Stream do
   }
 
   defp to_create_body(attrs) do
-    Map.new(attrs, fn {key, value} ->
-      {Map.fetch!(@create_mapping, key), value}
-    end)
+    Bunnyx.Params.map_keys!(attrs, @create_mapping)
   end
 
   @update_mapping %{
@@ -698,17 +696,13 @@ defmodule Bunnyx.Stream do
   }
 
   defp to_update_body(attrs) do
-    Map.new(attrs, fn {key, value} ->
-      {Map.fetch!(@update_mapping, key), value}
-    end)
+    Bunnyx.Params.map_keys!(attrs, @update_mapping)
   end
 
   @fetch_mapping %{url: "url", title: "title", headers: "headers"}
 
   defp to_fetch_body(attrs) do
-    Map.new(attrs, fn {key, value} ->
-      {Map.fetch!(@fetch_mapping, key), value}
-    end)
+    Bunnyx.Params.map_keys!(attrs, @fetch_mapping)
   end
 
   defp to_collection_params(opts) do
@@ -753,9 +747,7 @@ defmodule Bunnyx.Stream do
   }
 
   defp to_transcribe_body(opts) do
-    Map.new(opts, fn {key, value} ->
-      {Map.fetch!(@transcribe_mapping, key), value}
-    end)
+    Bunnyx.Params.map_keys!(opts, @transcribe_mapping)
   end
 
   @smart_actions_mapping %{
@@ -767,9 +759,7 @@ defmodule Bunnyx.Stream do
   }
 
   defp to_smart_actions_body(opts) do
-    Map.new(opts, fn {key, value} ->
-      {Map.fetch!(@smart_actions_mapping, key), value}
-    end)
+    Bunnyx.Params.map_keys!(opts, @smart_actions_mapping)
   end
 
   defp to_statistics_params(opts) do
