@@ -43,10 +43,13 @@ defmodule Bunnyx.Stream do
     api_key = Keyword.fetch!(opts, :api_key)
     library_id = Keyword.fetch!(opts, :library_id)
 
+    extra_req_opts = Keyword.get(opts, :req_opts, [])
+
     req_opts =
       [base_url: "https://video.bunnycdn.com", headers: [{"AccessKey", api_key}]]
       |> maybe_put(:receive_timeout, opts[:receive_timeout])
       |> maybe_put(:finch, opts[:finch])
+      |> Keyword.merge(extra_req_opts)
 
     %__MODULE__{req: Req.new(req_opts), library_id: library_id}
   end

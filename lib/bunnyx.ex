@@ -52,22 +52,28 @@ defmodule Bunnyx do
   ## Options
 
     * `:api_key` (required) — your bunny.net API key
-    * `:receive_timeout` — socket receive timeout in milliseconds (default `15_000`)
+    * `:receive_timeout` — default socket receive timeout in milliseconds
     * `:finch` — a custom Finch pool name
+    * `:req_opts` — additional Req options merged into the request (e.g. `[redirect: false]`)
 
   ## Examples
 
       client = Bunnyx.new(api_key: "sk-...")
 
+      # With custom timeout and Req options
+      client = Bunnyx.new(api_key: "sk-...", receive_timeout: 30_000, req_opts: [retry: false])
+
   """
   @spec new(keyword()) :: t()
   def new(opts) do
     api_key = Keyword.fetch!(opts, :api_key)
+    extra_req_opts = Keyword.get(opts, :req_opts, [])
 
     req_opts =
       [base_url: "https://api.bunny.net", headers: [{"AccessKey", api_key}]]
       |> maybe_put(:receive_timeout, opts[:receive_timeout])
       |> maybe_put(:finch, opts[:finch])
+      |> Keyword.merge(extra_req_opts)
 
     %__MODULE__{req: Req.new(req_opts)}
   end

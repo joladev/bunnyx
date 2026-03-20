@@ -53,10 +53,13 @@ defmodule Bunnyx.Storage do
         r -> "https://#{r}.storage.bunnycdn.com"
       end
 
+    extra_req_opts = Keyword.get(opts, :req_opts, [])
+
     req_opts =
       [base_url: base_url, headers: [{"AccessKey", storage_key}]]
       |> maybe_put(:receive_timeout, opts[:receive_timeout])
       |> maybe_put(:finch, opts[:finch])
+      |> Keyword.merge(extra_req_opts)
 
     %__MODULE__{req: Req.new(req_opts), zone: zone}
   end

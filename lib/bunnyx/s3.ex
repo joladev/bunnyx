@@ -55,6 +55,7 @@ defmodule Bunnyx.S3 do
       ]
       |> maybe_put(:receive_timeout, opts[:receive_timeout])
       |> maybe_put(:finch, opts[:finch])
+      |> Keyword.merge(Keyword.get(opts, :req_opts, []))
 
     %__MODULE__{req: Req.new(req_opts), zone: zone}
   end

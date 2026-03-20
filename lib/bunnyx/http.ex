@@ -10,14 +10,24 @@ defmodule Bunnyx.HTTP do
   @doc """
   Performs an HTTP request against the bunny.net API.
 
-  Pass `return_headers: true` in opts to receive `{:ok, {body, headers}}`
-  instead of `{:ok, body}`. HEAD requests always return headers only.
+  ## Options
+
+  In addition to standard Req options (`:body`, `:json`, `:params`, `:headers`),
+  the following Bunnyx-specific options are supported:
+
+    * `:return_headers` — return `{:ok, {body, headers}}` instead of `{:ok, body}`
+    * `:receive_timeout` — per-request receive timeout in milliseconds
+
+  HEAD requests always return headers only.
   """
   @spec request(Req.Request.t(), method(), String.t(), keyword()) ::
           {:ok, term()} | {:error, Bunnyx.Error.t()}
   def request(req, method, path, opts \\ []) do
-    {return_headers, req_opts} = Keyword.pop(opts, :return_headers, false)
+    {return_headers, opts} = Keyword.pop(opts, :return_headers, false)
+    {timeout, req_opts} = Keyword.pop(opts, :receive_timeout)
+
     req_opts = [{:method, method}, {:url, path} | req_opts]
+    req_opts = if timeout, do: [{:receive_timeout, timeout} | req_opts], else: req_opts
 
     case Req.request(req, req_opts) do
       {:ok, %Req.Response{status: status} = response} when status in 200..299 ->
