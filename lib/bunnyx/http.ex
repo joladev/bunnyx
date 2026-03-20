@@ -36,7 +36,7 @@ defmodule Bunnyx.HTTP do
          }}
 
       {:error, exception} ->
-        {:error, %Bunnyx.Error{message: Exception.message(exception)}}
+        {:error, %Bunnyx.Error{message: sanitize(Exception.message(exception))}}
     end
   end
 
@@ -46,4 +46,10 @@ defmodule Bunnyx.HTTP do
 
   defp extract_errors(%{"Errors" => errors}) when is_list(errors), do: errors
   defp extract_errors(_), do: nil
+
+  defp sanitize(message) do
+    message
+    |> String.replace(~r/AccessKey:\s*\S+/, "AccessKey: [REDACTED]")
+    |> String.replace(~r/api_key=\S+/, "api_key=[REDACTED]")
+  end
 end

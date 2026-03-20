@@ -25,6 +25,7 @@ defmodule Bunnyx.Storage do
 
   @type t :: %__MODULE__{req: Req.Request.t(), zone: String.t()}
 
+  @derive {Inspect, except: [:req]}
   @enforce_keys [:req, :zone]
   defstruct [:req, :zone]
 

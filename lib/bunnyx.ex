@@ -42,6 +42,7 @@ defmodule Bunnyx do
 
   @type t :: %__MODULE__{req: Req.Request.t()}
 
+  @derive {Inspect, except: [:req]}
   @enforce_keys [:req]
   defstruct [:req]
 

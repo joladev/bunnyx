@@ -23,6 +23,7 @@ defmodule Bunnyx.Stream do
 
   @type t :: %__MODULE__{req: Req.Request.t(), library_id: pos_integer()}
 
+  @derive {Inspect, except: [:req]}
   @enforce_keys [:req, :library_id]
   defstruct [:req, :library_id]
 
