@@ -8,10 +8,18 @@ defmodule Bunnyx.MagicContainers do
 
       client = Bunnyx.new(api_key: "sk-...")
 
-      {:ok, app} = Bunnyx.MagicContainers.create(client, %{"name" => "my-app", ...})
-      {:ok, nil} = Bunnyx.MagicContainers.deploy(client, app["id"])
+      {:ok, app} = Bunnyx.MagicContainers.create(client,
+        name: "my-app",
+        runtime_type: "Shared",
+        auto_scaling: %{"minReplicas" => 1, "maxReplicas" => 3},
+        region_settings: %{"baseRegion" => "DE"}
+      )
+
+      {:ok, nil} = Bunnyx.MagicContainers.deploy(client, app.id)
       {:ok, apps} = Bunnyx.MagicContainers.list(client)
   """
+
+  alias Bunnyx.MagicContainers.App
 
   @doc """
   Lists applications.
@@ -29,41 +37,65 @@ defmodule Bunnyx.MagicContainers do
     params = to_list_params(opts)
 
     case Bunnyx.HTTP.request(client.req, :get, "/mc/apps", params: params) do
-      {:ok, body} -> {:ok, body}
-      {:error, _} = error -> error
+      {:ok, body} ->
+        items =
+          body
+          |> Map.get("data", [])
+          |> Enum.map(&App.from_response/1)
+
+        {:ok, Map.put(body, "data", items)}
+
+      {:error, _} = error ->
+        error
     end
   end
 
   @doc "Fetches an application by ID."
-  @spec get(Bunnyx.t() | keyword(), String.t()) :: {:ok, map()} | {:error, Bunnyx.Error.t()}
+  @spec get(Bunnyx.t() | keyword(), String.t()) ::
+          {:ok, App.t()} | {:error, Bunnyx.Error.t()}
   def get(client, app_id) do
     client = Bunnyx.resolve(client)
 
     case Bunnyx.HTTP.request(client.req, :get, "/mc/apps/#{app_id}", []) do
-      {:ok, body} -> {:ok, body}
+      {:ok, body} -> {:ok, App.from_response(body)}
       {:error, _} = error -> error
     end
   end
 
-  @doc "Creates an application. Pass the full config as a map (camelCase keys)."
-  @spec create(Bunnyx.t() | keyword(), map()) :: {:ok, map()} | {:error, Bunnyx.Error.t()}
-  def create(client, config) do
+  @doc """
+  Creates an application.
+
+  ## Attributes
+
+    * `:name` (required) — app name
+    * `:runtime_type` (required) — `"Shared"` or `"Reserved"`
+    * `:auto_scaling` — autoscaling config map (camelCase keys)
+    * `:region_settings` — region config map (camelCase keys)
+    * `:container_templates` — list of container config maps
+    * `:volumes` — list of volume config maps
+
+  """
+  @spec create(Bunnyx.t() | keyword(), keyword()) ::
+          {:ok, App.t()} | {:error, Bunnyx.Error.t()}
+  def create(client, attrs) do
     client = Bunnyx.resolve(client)
 
-    case Bunnyx.HTTP.request(client.req, :post, "/mc/apps", json: config) do
-      {:ok, body} -> {:ok, body}
+    case Bunnyx.HTTP.request(client.req, :post, "/mc/apps", json: App.to_request_body(attrs)) do
+      {:ok, body} -> {:ok, App.from_response(body)}
       {:error, _} = error -> error
     end
   end
 
   @doc "Replaces the full application configuration."
-  @spec update(Bunnyx.t() | keyword(), String.t(), map()) ::
-          {:ok, map()} | {:error, Bunnyx.Error.t()}
-  def update(client, app_id, config) do
+  @spec update(Bunnyx.t() | keyword(), String.t(), keyword()) ::
+          {:ok, App.t()} | {:error, Bunnyx.Error.t()}
+  def update(client, app_id, attrs) do
     client = Bunnyx.resolve(client)
 
-    case Bunnyx.HTTP.request(client.req, :put, "/mc/apps/#{app_id}", json: config) do
-      {:ok, body} -> {:ok, body}
+    case Bunnyx.HTTP.request(client.req, :put, "/mc/apps/#{app_id}",
+           json: App.to_request_body(attrs)
+         ) do
+      {:ok, body} -> {:ok, App.from_response(body)}
       {:error, _} = error -> error
     end
   end

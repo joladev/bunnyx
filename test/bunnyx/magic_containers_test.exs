@@ -7,54 +7,58 @@ defmodule Bunnyx.MagicContainersTest do
   end
 
   describe "list/2" do
-    test "returns applications", %{client: client} do
-      response = %{"data" => [%{"id" => "app-1"}], "nextCursor" => nil}
+    test "returns parsed applications", %{client: client} do
+      response = %{"data" => [Bunnyx.Factory.mc_app_response()], "nextCursor" => nil}
 
       expect(Bunnyx.HTTP, :request, fn _req, :get, "/mc/apps", opts ->
         assert opts[:params] == %{}
         {:ok, response}
       end)
 
-      assert {:ok, %{"data" => [%{"id" => "app-1"}]}} = Bunnyx.MagicContainers.list(client)
+      assert {:ok, result} = Bunnyx.MagicContainers.list(client)
+      assert [%Bunnyx.MagicContainers.App{id: "app-abc-123", name: "my-app"}] = result["data"]
     end
   end
 
   describe "get/2" do
-    test "returns application", %{client: client} do
-      response = %{"id" => "app-1", "name" => "my-app"}
+    test "returns parsed application", %{client: client} do
+      response = Bunnyx.Factory.mc_app_response()
 
       expect(Bunnyx.HTTP, :request, fn _req, :get, "/mc/apps/app-1", _opts ->
         {:ok, response}
       end)
 
-      assert {:ok, %{"id" => "app-1"}} = Bunnyx.MagicContainers.get(client, "app-1")
+      assert {:ok, %Bunnyx.MagicContainers.App{id: "app-abc-123", name: "my-app"}} =
+               Bunnyx.MagicContainers.get(client, "app-1")
     end
   end
 
   describe "create/2" do
-    test "sends config and returns app", %{client: client} do
-      config = %{"name" => "my-app", "runtimeType" => "Shared"}
-      response = %{"id" => "app-1"}
+    test "sends keyword attrs and returns parsed app", %{client: client} do
+      response = Bunnyx.Factory.mc_app_response()
 
       expect(Bunnyx.HTTP, :request, fn _req, :post, "/mc/apps", opts ->
-        assert opts[:json] == config
+        assert opts[:json]["name"] == "my-app"
+        assert opts[:json]["runtimeType"] == "Shared"
         {:ok, response}
       end)
 
-      assert {:ok, %{"id" => "app-1"}} = Bunnyx.MagicContainers.create(client, config)
+      assert {:ok, %Bunnyx.MagicContainers.App{name: "my-app"}} =
+               Bunnyx.MagicContainers.create(client, name: "my-app", runtime_type: "Shared")
     end
   end
 
   describe "update/3" do
-    test "replaces full config", %{client: client} do
-      response = %{"id" => "app-1"}
+    test "sends keyword attrs", %{client: client} do
+      response = Bunnyx.Factory.mc_app_response(%{"name" => "updated"})
 
       expect(Bunnyx.HTTP, :request, fn _req, :put, "/mc/apps/app-1", opts ->
         assert opts[:json]["name"] == "updated"
         {:ok, response}
       end)
 
-      assert {:ok, _} = Bunnyx.MagicContainers.update(client, "app-1", %{"name" => "updated"})
+      assert {:ok, %Bunnyx.MagicContainers.App{}} =
+               Bunnyx.MagicContainers.update(client, "app-1", name: "updated")
     end
   end
 

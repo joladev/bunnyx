@@ -295,6 +295,23 @@ defmodule Bunnyx.Factory do
     )
   end
 
+  def mc_app_response(overrides \\ %{}) do
+    Map.merge(
+      %{
+        "id" => "app-abc-123",
+        "name" => "my-app",
+        "status" => "Active",
+        "runtimeType" => "Shared",
+        "autoScaling" => %{"minReplicas" => 1, "maxReplicas" => 3},
+        "regionSettings" => %{"baseRegion" => "DE"},
+        "containerTemplates" => [],
+        "containerInstances" => [],
+        "volumes" => []
+      },
+      overrides
+    )
+  end
+
   def dns_zone_list_response(overrides \\ %{}) do
     Map.merge(
       %{
