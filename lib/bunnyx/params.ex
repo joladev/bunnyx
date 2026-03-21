@@ -40,9 +40,9 @@ defmodule Bunnyx.Params do
   """
   @spec map_keys(keyword(), %{atom() => String.t()}) :: map()
   def map_keys(attrs, mapping) do
-    Map.new(attrs, fn {key, value} ->
-      {Map.fetch!(mapping, key), value}
-    end)
+    for {key, value} <- attrs, mapped = Map.get(mapping, key), into: %{} do
+      {mapped, value}
+    end
   end
 
   @doc "Puts a key-value pair into a keyword list only if the value is not nil."
