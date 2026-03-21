@@ -54,8 +54,22 @@ defmodule Bunnyx.MixProject do
       extras: ["README.md", "CHANGELOG.md", "LICENSE"],
       source_ref: "v#{@version}",
       groups_for_modules: [
-        API: [Bunnyx.PullZone, Bunnyx.DnsZone, Bunnyx.DnsRecord, Bunnyx.Purge, Bunnyx.Storage],
-        Core: [Bunnyx, Bunnyx.HTTP, Bunnyx.Error, Bunnyx.Storage.Object]
+        CDN: [Bunnyx.PullZone, Bunnyx.Purge, Bunnyx.Statistics],
+        DNS: [Bunnyx.DnsZone, Bunnyx.DnsRecord],
+        Storage: [Bunnyx.StorageZone, Bunnyx.Storage, Bunnyx.S3],
+        Stream: [Bunnyx.VideoLibrary, Bunnyx.Stream],
+        Security: [Bunnyx.Shield],
+        Compute: [Bunnyx.EdgeScript, Bunnyx.MagicContainers],
+        Account: [Bunnyx.Billing, Bunnyx.Account, Bunnyx.ApiKey, Bunnyx.Logging],
+        Reference: [Bunnyx.Country, Bunnyx.Region],
+        Core: [Bunnyx, Bunnyx.HTTP, Bunnyx.Error, Bunnyx.Params],
+        Structs: [
+          Bunnyx.Storage.Object,
+          Bunnyx.Stream.Video,
+          Bunnyx.Stream.Collection,
+          Bunnyx.Shield.Zone,
+          Bunnyx.S3.XML
+        ]
       ]
     ]
   end
