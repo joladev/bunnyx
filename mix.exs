@@ -14,7 +14,7 @@ defmodule Bunnyx.MixProject do
       warnings_as_errors: true,
       deps: deps(),
       name: "Bunnyx",
-      description: "Elixir client for the bunny.net CDN API.",
+      description: "Elixir client for the bunny.net API.",
       source_url: @source_url,
       homepage_url: @source_url,
       package: package(),
@@ -68,8 +68,7 @@ defmodule Bunnyx.MixProject do
           Bunnyx.Stream.Video,
           Bunnyx.Stream.Collection,
           Bunnyx.Shield.Zone,
-          Bunnyx.MagicContainers.App,
-          Bunnyx.S3.XML
+          Bunnyx.MagicContainers.App
         ]
       ]
     ]

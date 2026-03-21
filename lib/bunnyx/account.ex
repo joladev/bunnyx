@@ -66,8 +66,8 @@ defmodule Bunnyx.Account do
 
     params =
       %{"search" => query}
-      |> maybe_put_param("from", opts[:from])
-      |> maybe_put_param("size", opts[:size])
+      |> Bunnyx.Params.maybe_put_map("from", opts[:from])
+      |> Bunnyx.Params.maybe_put_map("size", opts[:size])
 
     case Bunnyx.HTTP.request(client.req, :get, "/search", params: params) do
       {:ok, body} -> {:ok, body}
@@ -91,8 +91,8 @@ defmodule Bunnyx.Account do
 
     json =
       %{}
-      |> maybe_put_param("Password", opts[:password])
-      |> maybe_put_param("Reason", opts[:reason])
+      |> Bunnyx.Params.maybe_put_map("Password", opts[:password])
+      |> Bunnyx.Params.maybe_put_map("Reason", opts[:reason])
 
     case Bunnyx.HTTP.request(client.req, :post, "/user/closeaccount", json: json) do
       {:ok, _} -> {:ok, nil}
@@ -118,7 +118,4 @@ defmodule Bunnyx.Account do
       {Map.fetch!(mapping, key), value}
     end)
   end
-
-  defp maybe_put_param(params, _key, nil), do: params
-  defp maybe_put_param(params, key, value), do: Map.put(params, key, value)
 end

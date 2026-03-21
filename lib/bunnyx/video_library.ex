@@ -44,6 +44,7 @@ defmodule Bunnyx.VideoLibrary do
           player_key_color: String.t() | nil
         }
 
+  @derive {Inspect, except: [:api_key, :read_only_api_key]}
   defstruct [
     :id,
     :name,

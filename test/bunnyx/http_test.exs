@@ -147,5 +147,103 @@ defmodule Bunnyx.HTTPTest do
       assert {:error, %Bunnyx.Error{message: "The specified key does not exist."}} =
                Bunnyx.HTTP.request(req, :get, "/zone/missing.txt", [])
     end
+
+    test "sanitize redacts secret_access_key", %{req: req} do
+      expect(Req, :request, fn _req, _opts ->
+        {:error, %RuntimeError{message: "secret_access_key: pw-very-secret"}}
+      end)
+
+      assert {:error, %Bunnyx.Error{message: message}} =
+               Bunnyx.HTTP.request(req, :get, "/zone", [])
+
+      assert message =~ "secret_access_key: [REDACTED]"
+      refute message =~ "pw-very-secret"
+    end
+
+    test "sanitize redacts Authorization header", %{req: req} do
+      expect(Req, :request, fn _req, _opts ->
+        {:error, %RuntimeError{message: "Authorization: Basic dXNlcjpwYXNz"}}
+      end)
+
+      assert {:error, %Bunnyx.Error{message: message}} =
+               Bunnyx.HTTP.request(req, :get, "/zone", [])
+
+      assert message =~ "Authorization: [REDACTED]"
+      refute message =~ "dXNlcjpwYXNz"
+    end
+
+    test "sanitize redacts password", %{req: req} do
+      expect(Req, :request, fn _req, _opts ->
+        {:error, %RuntimeError{message: "password: my-secret-pw"}}
+      end)
+
+      assert {:error, %Bunnyx.Error{message: message}} =
+               Bunnyx.HTTP.request(req, :get, "/zone", [])
+
+      assert message =~ "password: [REDACTED]"
+      refute message =~ "my-secret-pw"
+    end
+
+    test "emits telemetry start and stop events on success", %{req: req} do
+      ref = make_ref()
+      pid = self()
+
+      :telemetry.attach(
+        "test-start",
+        [:bunnyx, :request, :start],
+        fn _event, measurements, metadata, _ ->
+          send(pid, {:start, ref, measurements, metadata})
+        end,
+        nil
+      )
+
+      :telemetry.attach(
+        "test-stop",
+        [:bunnyx, :request, :stop],
+        fn _event, measurements, metadata, _ ->
+          send(pid, {:stop, ref, measurements, metadata})
+        end,
+        nil
+      )
+
+      expect(Req, :request, fn _req, _opts ->
+        {:ok, %Req.Response{status: 200, body: %{}}}
+      end)
+
+      Bunnyx.HTTP.request(req, :get, "/pullzone", [])
+
+      assert_receive {:start, ^ref, %{system_time: _}, %{method: :get, path: "/pullzone"}}
+
+      assert_receive {:stop, ^ref, %{duration: _},
+                      %{method: :get, path: "/pullzone", status: 200}}
+
+      :telemetry.detach("test-start")
+      :telemetry.detach("test-stop")
+    end
+
+    test "emits telemetry exception event on transport error", %{req: req} do
+      ref = make_ref()
+      pid = self()
+
+      :telemetry.attach(
+        "test-exc",
+        [:bunnyx, :request, :exception],
+        fn _event, measurements, metadata, _ ->
+          send(pid, {:exception, ref, measurements, metadata})
+        end,
+        nil
+      )
+
+      expect(Req, :request, fn _req, _opts ->
+        {:error, %Mint.TransportError{reason: :timeout}}
+      end)
+
+      Bunnyx.HTTP.request(req, :get, "/pullzone", [])
+
+      assert_receive {:exception, ^ref, %{duration: _},
+                      %{method: :get, path: "/pullzone", kind: :error}}
+
+      :telemetry.detach("test-exc")
+    end
   end
 end

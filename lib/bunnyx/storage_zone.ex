@@ -41,6 +41,7 @@ defmodule Bunnyx.StorageZone do
           zone_tier: integer() | nil
         }
 
+  @derive {Inspect, except: [:password, :read_only_password]}
   defstruct [
     :id,
     :name,

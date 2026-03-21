@@ -119,7 +119,7 @@ defmodule Bunnyx.HTTP do
     |> String.replace(~r/AccessKey:\s*\S+/, "AccessKey: [REDACTED]")
     |> String.replace(~r/api_key=\S+/, "api_key=[REDACTED]")
     |> String.replace(~r/secret_access_key[:\s=]+\S+/i, "secret_access_key: [REDACTED]")
-    |> String.replace(~r/Authorization:\s*\S+/i, "Authorization: [REDACTED]")
+    |> String.replace(~r/Authorization:\s*.+/i, "Authorization: [REDACTED]")
     |> String.replace(~r/Bearer\s+\S+/, "Bearer [REDACTED]")
     |> String.replace(~r/password[:\s=]+\S+/i, "password: [REDACTED]")
   end
