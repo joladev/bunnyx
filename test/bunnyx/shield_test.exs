@@ -154,6 +154,16 @@ defmodule Bunnyx.ShieldTest do
 
       assert {:ok, ^response} = Bunnyx.Shield.list_waf_rules(client, 100_001)
     end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 500, message: "Server error"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :get, "/shield/waf/rules/100001", _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} = Bunnyx.Shield.list_waf_rules(client, 100_001)
+    end
   end
 
   describe "list_custom_waf_rules/2" do
@@ -223,6 +233,16 @@ defmodule Bunnyx.ShieldTest do
       end)
 
       assert {:ok, nil} = Bunnyx.Shield.delete_custom_waf_rule(client, 1)
+    end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 404, message: "Not found"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :delete, "/shield/waf/custom-rule/1", _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} = Bunnyx.Shield.delete_custom_waf_rule(client, 1)
     end
   end
 
@@ -423,6 +443,16 @@ defmodule Bunnyx.ShieldTest do
 
       assert {:ok, %{"waf" => %{}}} = Bunnyx.Shield.metrics_overview(client, 100_001)
     end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 500, message: "Server error"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :get, "/shield/metrics/overview/100001", _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} = Bunnyx.Shield.metrics_overview(client, 100_001)
+    end
   end
 
   describe "metrics_detailed/3" do
@@ -561,6 +591,19 @@ defmodule Bunnyx.ShieldTest do
       assert {:ok, %{"shieldZoneId" => 100_001}} =
                Bunnyx.Shield.get_bot_detection(client, 100_001)
     end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 404, message: "Not found"}
+
+      expect(Bunnyx.HTTP, :request, fn _req,
+                                       :get,
+                                       "/shield/shield-zone/100001/bot-detection",
+                                       _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} = Bunnyx.Shield.get_bot_detection(client, 100_001)
+    end
   end
 
   describe "update_bot_detection/3" do
@@ -697,6 +740,16 @@ defmodule Bunnyx.ShieldTest do
 
       assert {:ok, nil} = Bunnyx.Shield.delete_rate_limit(client, 1)
     end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 404, message: "Not found"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :delete, "/shield/rate-limit/1", _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} = Bunnyx.Shield.delete_rate_limit(client, 1)
+    end
   end
 
   # -- Access Lists --
@@ -784,6 +837,19 @@ defmodule Bunnyx.ShieldTest do
       end)
 
       assert {:ok, nil} = Bunnyx.Shield.delete_access_list(client, 100_001, 1)
+    end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 404, message: "Not found"}
+
+      expect(Bunnyx.HTTP, :request, fn _req,
+                                       :delete,
+                                       "/shield/shield-zone/100001/access-lists/1",
+                                       _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} = Bunnyx.Shield.delete_access_list(client, 100_001, 1)
     end
   end
 

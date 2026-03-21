@@ -81,5 +81,71 @@ defmodule Bunnyx.HTTPTest do
 
       Bunnyx.HTTP.request(req, :get, "/pullzone", params: %{"page" => 1})
     end
+
+    test "HEAD returns headers instead of body", %{req: req} do
+      expect(Req, :request, fn _req, _opts ->
+        {:ok, %Req.Response{status: 200, body: "", headers: %{"content-length" => ["1024"]}}}
+      end)
+
+      assert {:ok, %{"content-length" => ["1024"]}} =
+               Bunnyx.HTTP.request(req, :head, "/zone/file.txt", [])
+    end
+
+    test "return_headers: true returns {body, headers} tuple", %{req: req} do
+      expect(Req, :request, fn _req, _opts ->
+        {:ok, %Req.Response{status: 200, body: "ok", headers: %{"etag" => ["\"abc\""]}}}
+      end)
+
+      assert {:ok, {"ok", %{"etag" => ["\"abc\""]}}} =
+               Bunnyx.HTTP.request(req, :put, "/zone/file.txt",
+                 body: "data",
+                 return_headers: true
+               )
+    end
+
+    test "receive_timeout is forwarded to Req", %{req: req} do
+      expect(Req, :request, fn _req, opts ->
+        assert opts[:receive_timeout] == 60_000
+        {:ok, %Req.Response{status: 200, body: %{}}}
+      end)
+
+      Bunnyx.HTTP.request(req, :get, "/pullzone", receive_timeout: 60_000)
+    end
+
+    test "sanitize redacts AccessKey from error messages", %{req: req} do
+      expect(Req, :request, fn _req, _opts ->
+        {:error, %RuntimeError{message: "failed with AccessKey: sk-secret-123 in header"}}
+      end)
+
+      assert {:error, %Bunnyx.Error{message: message}} =
+               Bunnyx.HTTP.request(req, :get, "/pullzone", [])
+
+      assert message =~ "AccessKey: [REDACTED]"
+      refute message =~ "sk-secret-123"
+    end
+
+    test "sanitize redacts Bearer tokens", %{req: req} do
+      expect(Req, :request, fn _req, _opts ->
+        {:error, %RuntimeError{message: "auth failed Bearer eyJhbGciOiJI..."}}
+      end)
+
+      assert {:error, %Bunnyx.Error{message: message}} =
+               Bunnyx.HTTP.request(req, :get, "/pullzone", [])
+
+      assert message =~ "Bearer [REDACTED]"
+      refute message =~ "eyJhbGciOiJI"
+    end
+
+    test "extracts message from XML error responses", %{req: req} do
+      xml_body =
+        "<Error><Code>NoSuchKey</Code><Message>The specified key does not exist.</Message></Error>"
+
+      expect(Req, :request, fn _req, _opts ->
+        {:ok, %Req.Response{status: 404, body: xml_body}}
+      end)
+
+      assert {:error, %Bunnyx.Error{message: "The specified key does not exist."}} =
+               Bunnyx.HTTP.request(req, :get, "/zone/missing.txt", [])
+    end
   end
 end
