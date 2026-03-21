@@ -79,6 +79,16 @@ defmodule Bunnyx.ShieldTest do
       assert {:ok, result} = Bunnyx.Shield.list_active(client)
       assert [%Bunnyx.Shield.Zone{}] = result.items
     end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 500, message: "Server error"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :get, "/shield/shield-zones/active", _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} = Bunnyx.Shield.list_active(client)
+    end
   end
 
   describe "get/2" do
@@ -114,6 +124,16 @@ defmodule Bunnyx.ShieldTest do
 
       assert {:ok, %Bunnyx.Shield.Zone{pull_zone_id: 12_345}} =
                Bunnyx.Shield.get_by_pull_zone(client, 12_345)
+    end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 404, message: "Not found"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :get, "/shield/shield-zone/pull-zone/999", _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} = Bunnyx.Shield.get_by_pull_zone(client, 999)
     end
   end
 
@@ -179,6 +199,16 @@ defmodule Bunnyx.ShieldTest do
 
       assert {:ok, result} = Bunnyx.Shield.list_custom_waf_rules(client, 100_001)
       assert [%{"id" => 1}] = result.items
+    end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 500, message: "Server error"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :get, "/shield/waf/custom-rules/100001", _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} = Bunnyx.Shield.list_custom_waf_rules(client, 100_001)
     end
   end
 
@@ -573,6 +603,19 @@ defmodule Bunnyx.ShieldTest do
 
       assert {:ok, _} = Bunnyx.Shield.event_logs(client, 100_001, "06-01-2025", "abc123")
     end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 500, message: "Server error"}
+
+      expect(Bunnyx.HTTP, :request, fn _req,
+                                       :get,
+                                       "/shield/event-logs/100001/06-01-2025/",
+                                       _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} = Bunnyx.Shield.event_logs(client, 100_001, ~D[2025-06-01])
+    end
   end
 
   # -- Bot Detection --
@@ -686,6 +729,16 @@ defmodule Bunnyx.ShieldTest do
       assert {:ok, result} = Bunnyx.Shield.list_rate_limits(client, 100_001)
       assert [%{"id" => 1}] = result.items
     end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 500, message: "Server error"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :get, "/shield/rate-limits/100001", _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} = Bunnyx.Shield.list_rate_limits(client, 100_001)
+    end
   end
 
   describe "get_rate_limit/3" do
@@ -715,6 +768,20 @@ defmodule Bunnyx.ShieldTest do
                  shield_zone_id: 100_001,
                  rule_name: "API limit",
                  rule_configuration: %{}
+               )
+    end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 400, message: "Bad request"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :post, "/shield/rate-limit", _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} =
+               Bunnyx.Shield.create_rate_limit(client,
+                 shield_zone_id: 100_001,
+                 rule_name: "Bad"
                )
     end
   end
@@ -766,6 +833,19 @@ defmodule Bunnyx.ShieldTest do
       end)
 
       assert {:ok, [%{"id" => 1}]} = Bunnyx.Shield.list_access_lists(client, 100_001)
+    end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 500, message: "Server error"}
+
+      expect(Bunnyx.HTTP, :request, fn _req,
+                                       :get,
+                                       "/shield/shield-zone/100001/access-lists",
+                                       _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} = Bunnyx.Shield.list_access_lists(client, 100_001)
     end
   end
 

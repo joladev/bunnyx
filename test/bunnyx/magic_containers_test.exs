@@ -18,6 +18,16 @@ defmodule Bunnyx.MagicContainersTest do
       assert {:ok, result} = Bunnyx.MagicContainers.list(client)
       assert [%Bunnyx.MagicContainers.App{id: "app-abc-123", name: "my-app"}] = result["data"]
     end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 500, message: "Server error"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :get, "/mc/apps", _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} = Bunnyx.MagicContainers.list(client)
+    end
   end
 
   describe "get/2" do
@@ -30,6 +40,16 @@ defmodule Bunnyx.MagicContainersTest do
 
       assert {:ok, %Bunnyx.MagicContainers.App{id: "app-abc-123", name: "my-app"}} =
                Bunnyx.MagicContainers.get(client, "app-1")
+    end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 404, message: "Not found"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :get, "/mc/apps/bad-id", _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} = Bunnyx.MagicContainers.get(client, "bad-id")
     end
   end
 
@@ -46,6 +66,17 @@ defmodule Bunnyx.MagicContainersTest do
       assert {:ok, %Bunnyx.MagicContainers.App{name: "my-app"}} =
                Bunnyx.MagicContainers.create(client, name: "my-app", runtime_type: "Shared")
     end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 400, message: "Bad request"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :post, "/mc/apps", _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} =
+               Bunnyx.MagicContainers.create(client, name: "my-app", runtime_type: "Shared")
+    end
   end
 
   describe "update/3" do
@@ -58,6 +89,17 @@ defmodule Bunnyx.MagicContainersTest do
       end)
 
       assert {:ok, %Bunnyx.MagicContainers.App{}} =
+               Bunnyx.MagicContainers.update(client, "app-1", name: "updated")
+    end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 500, message: "Server error"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :put, "/mc/apps/app-1", _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} =
                Bunnyx.MagicContainers.update(client, "app-1", name: "updated")
     end
   end
@@ -73,6 +115,17 @@ defmodule Bunnyx.MagicContainersTest do
 
       assert {:ok, _} = Bunnyx.MagicContainers.patch(client, "app-1", %{"name" => "patched"})
     end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 500, message: "Server error"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :patch, "/mc/apps/app-1", _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} =
+               Bunnyx.MagicContainers.patch(client, "app-1", %{"name" => "patched"})
+    end
   end
 
   describe "delete/2" do
@@ -82,6 +135,16 @@ defmodule Bunnyx.MagicContainersTest do
       end)
 
       assert {:ok, nil} = Bunnyx.MagicContainers.delete(client, "app-1")
+    end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 404, message: "Not found"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :delete, "/mc/apps/app-1", _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} = Bunnyx.MagicContainers.delete(client, "app-1")
     end
   end
 
@@ -93,6 +156,16 @@ defmodule Bunnyx.MagicContainersTest do
 
       assert {:ok, nil} = Bunnyx.MagicContainers.deploy(client, "app-1")
     end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 500, message: "Server error"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :post, "/mc/apps/app-1/deploy", _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} = Bunnyx.MagicContainers.deploy(client, "app-1")
+    end
   end
 
   describe "undeploy/2" do
@@ -103,6 +176,16 @@ defmodule Bunnyx.MagicContainersTest do
 
       assert {:ok, nil} = Bunnyx.MagicContainers.undeploy(client, "app-1")
     end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 500, message: "Server error"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :post, "/mc/apps/app-1/undeploy", _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} = Bunnyx.MagicContainers.undeploy(client, "app-1")
+    end
   end
 
   describe "restart/2" do
@@ -112,6 +195,16 @@ defmodule Bunnyx.MagicContainersTest do
       end)
 
       assert {:ok, nil} = Bunnyx.MagicContainers.restart(client, "app-1")
+    end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 500, message: "Server error"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :post, "/mc/apps/app-1/restart", _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} = Bunnyx.MagicContainers.restart(client, "app-1")
     end
   end
 
@@ -125,6 +218,16 @@ defmodule Bunnyx.MagicContainersTest do
 
       assert {:ok, %{"status" => "running"}} = Bunnyx.MagicContainers.overview(client, "app-1")
     end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 404, message: "Not found"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :get, "/mc/apps/app-1/overview", _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} = Bunnyx.MagicContainers.overview(client, "app-1")
+    end
   end
 
   describe "statistics/2" do
@@ -136,6 +239,16 @@ defmodule Bunnyx.MagicContainersTest do
       end)
 
       assert {:ok, %{"cpuUsage" => 0.5}} = Bunnyx.MagicContainers.statistics(client, "app-1")
+    end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 500, message: "Server error"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :get, "/mc/apps/app-1/statistics", _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} = Bunnyx.MagicContainers.statistics(client, "app-1")
     end
   end
 
@@ -151,6 +264,16 @@ defmodule Bunnyx.MagicContainersTest do
 
       assert {:ok, [%{"id" => 1}]} = Bunnyx.MagicContainers.list_registries(client)
     end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 500, message: "Server error"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :get, "/mc/registries", _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} = Bunnyx.MagicContainers.list_registries(client)
+    end
   end
 
   describe "get_registry/2" do
@@ -162,6 +285,16 @@ defmodule Bunnyx.MagicContainersTest do
       end)
 
       assert {:ok, %{"id" => 1}} = Bunnyx.MagicContainers.get_registry(client, 1)
+    end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 404, message: "Not found"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :get, "/mc/registries/999", _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} = Bunnyx.MagicContainers.get_registry(client, 999)
     end
   end
 
@@ -177,6 +310,16 @@ defmodule Bunnyx.MagicContainersTest do
 
       assert {:ok, %{"id" => 1}} = Bunnyx.MagicContainers.add_registry(client, config)
     end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 400, message: "Bad request"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :post, "/mc/registries", _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} = Bunnyx.MagicContainers.add_registry(client, %{})
+    end
   end
 
   describe "update_registry/3" do
@@ -190,6 +333,17 @@ defmodule Bunnyx.MagicContainersTest do
       assert {:ok, _} =
                Bunnyx.MagicContainers.update_registry(client, 1, %{"displayName" => "Updated"})
     end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 500, message: "Server error"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :put, "/mc/registries/1", _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} =
+               Bunnyx.MagicContainers.update_registry(client, 1, %{})
+    end
   end
 
   describe "delete_registry/2" do
@@ -199,6 +353,16 @@ defmodule Bunnyx.MagicContainersTest do
       end)
 
       assert {:ok, nil} = Bunnyx.MagicContainers.delete_registry(client, 1)
+    end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 404, message: "Not found"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :delete, "/mc/registries/1", _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} = Bunnyx.MagicContainers.delete_registry(client, 1)
     end
   end
 
@@ -211,6 +375,16 @@ defmodule Bunnyx.MagicContainersTest do
       end)
 
       assert {:ok, _} = Bunnyx.MagicContainers.list_images(client, %{"registryId" => 1})
+    end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 500, message: "Server error"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :post, "/mc/registries/images", _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} = Bunnyx.MagicContainers.list_images(client, %{})
     end
   end
 
@@ -227,6 +401,20 @@ defmodule Bunnyx.MagicContainersTest do
 
       assert {:ok, _} =
                Bunnyx.MagicContainers.search_public_images(client, %{"prefix" => "nginx"})
+    end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 500, message: "Server error"}
+
+      expect(Bunnyx.HTTP, :request, fn _req,
+                                       :post,
+                                       "/mc/registries/public-images/search",
+                                       _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} =
+               Bunnyx.MagicContainers.search_public_images(client, %{})
     end
   end
 
@@ -245,6 +433,17 @@ defmodule Bunnyx.MagicContainersTest do
       assert {:ok, %{"id" => "c-1"}} =
                Bunnyx.MagicContainers.add_container(client, "app-1", config)
     end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 400, message: "Bad request"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :post, "/mc/apps/app-1/containers", _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} =
+               Bunnyx.MagicContainers.add_container(client, "app-1", %{"image" => "bad"})
+    end
   end
 
   describe "get_container/3" do
@@ -258,6 +457,17 @@ defmodule Bunnyx.MagicContainersTest do
       assert {:ok, %{"id" => "c-1"}} =
                Bunnyx.MagicContainers.get_container(client, "app-1", "c-1")
     end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 404, message: "Not found"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :get, "/mc/apps/app-1/containers/c-1", _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} =
+               Bunnyx.MagicContainers.get_container(client, "app-1", "c-1")
+    end
   end
 
   describe "delete_container/3" do
@@ -267,6 +477,17 @@ defmodule Bunnyx.MagicContainersTest do
       end)
 
       assert {:ok, nil} = Bunnyx.MagicContainers.delete_container(client, "app-1", "c-1")
+    end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 404, message: "Not found"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :delete, "/mc/apps/app-1/containers/c-1", _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} =
+               Bunnyx.MagicContainers.delete_container(client, "app-1", "c-1")
     end
   end
 
@@ -282,6 +503,17 @@ defmodule Bunnyx.MagicContainersTest do
       assert {:ok, nil} =
                Bunnyx.MagicContainers.set_container_env(client, "app-1", "c-1", env)
     end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 500, message: "Server error"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :put, "/mc/apps/app-1/containers/c-1/env", _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} =
+               Bunnyx.MagicContainers.set_container_env(client, "app-1", "c-1", [])
+    end
   end
 
   # -- Endpoints --
@@ -295,6 +527,16 @@ defmodule Bunnyx.MagicContainersTest do
       end)
 
       assert {:ok, [%{"id" => "ep-1"}]} = Bunnyx.MagicContainers.list_endpoints(client, "app-1")
+    end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 500, message: "Server error"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :get, "/mc/apps/app-1/endpoints", _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} = Bunnyx.MagicContainers.list_endpoints(client, "app-1")
     end
   end
 
@@ -313,6 +555,20 @@ defmodule Bunnyx.MagicContainersTest do
 
       assert {:ok, _} = Bunnyx.MagicContainers.add_endpoint(client, "app-1", "c-1", config)
     end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 400, message: "Bad request"}
+
+      expect(Bunnyx.HTTP, :request, fn _req,
+                                       :post,
+                                       "/mc/apps/app-1/containers/c-1/endpoints",
+                                       _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} =
+               Bunnyx.MagicContainers.add_endpoint(client, "app-1", "c-1", %{})
+    end
   end
 
   describe "delete_endpoint/3" do
@@ -322,6 +578,17 @@ defmodule Bunnyx.MagicContainersTest do
       end)
 
       assert {:ok, nil} = Bunnyx.MagicContainers.delete_endpoint(client, "app-1", "ep-1")
+    end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 404, message: "Not found"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :delete, "/mc/apps/app-1/endpoints/ep-1", _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} =
+               Bunnyx.MagicContainers.delete_endpoint(client, "app-1", "ep-1")
     end
   end
 
@@ -338,6 +605,16 @@ defmodule Bunnyx.MagicContainersTest do
       assert {:ok, %{"minReplicas" => 1}} =
                Bunnyx.MagicContainers.get_autoscaling(client, "app-1")
     end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 404, message: "Not found"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :get, "/mc/apps/app-1/autoscaling", _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} = Bunnyx.MagicContainers.get_autoscaling(client, "app-1")
+    end
   end
 
   describe "update_autoscaling/3" do
@@ -351,6 +628,17 @@ defmodule Bunnyx.MagicContainersTest do
 
       assert {:ok, _} =
                Bunnyx.MagicContainers.update_autoscaling(client, "app-1", %{"minReplicas" => 2})
+    end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 500, message: "Server error"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :put, "/mc/apps/app-1/autoscaling", _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} =
+               Bunnyx.MagicContainers.update_autoscaling(client, "app-1", %{})
     end
   end
 
@@ -366,6 +654,16 @@ defmodule Bunnyx.MagicContainersTest do
 
       assert {:ok, [%{"code" => "DE"}]} = Bunnyx.MagicContainers.list_regions(client)
     end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 500, message: "Server error"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :get, "/mc/regions", _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} = Bunnyx.MagicContainers.list_regions(client)
+    end
   end
 
   describe "get_optimal_region/2" do
@@ -378,6 +676,16 @@ defmodule Bunnyx.MagicContainersTest do
       end)
 
       assert {:ok, _} = Bunnyx.MagicContainers.get_optimal_region(client, "tok-123")
+    end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 500, message: "Server error"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :get, "/mc/regions/optimal", _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} = Bunnyx.MagicContainers.get_optimal_region(client, "tok-bad")
     end
   end
 
@@ -393,6 +701,16 @@ defmodule Bunnyx.MagicContainersTest do
 
       assert {:ok, [%{"id" => "vol-1"}]} = Bunnyx.MagicContainers.list_volumes(client, "app-1")
     end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 500, message: "Server error"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :get, "/mc/apps/app-1/volumes", _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} = Bunnyx.MagicContainers.list_volumes(client, "app-1")
+    end
   end
 
   describe "detach_volume/3" do
@@ -405,6 +723,20 @@ defmodule Bunnyx.MagicContainersTest do
       end)
 
       assert {:ok, nil} = Bunnyx.MagicContainers.detach_volume(client, "app-1", "vol-1")
+    end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 500, message: "Server error"}
+
+      expect(Bunnyx.HTTP, :request, fn _req,
+                                       :post,
+                                       "/mc/apps/app-1/volumes/vol-1/detach",
+                                       _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} =
+               Bunnyx.MagicContainers.detach_volume(client, "app-1", "vol-1")
     end
   end
 
@@ -420,6 +752,16 @@ defmodule Bunnyx.MagicContainersTest do
 
       assert {:ok, _} = Bunnyx.MagicContainers.list_nodes(client)
     end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 500, message: "Server error"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :get, "/mc/nodes", _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} = Bunnyx.MagicContainers.list_nodes(client)
+    end
   end
 
   # -- Pods --
@@ -431,6 +773,17 @@ defmodule Bunnyx.MagicContainersTest do
       end)
 
       assert {:ok, nil} = Bunnyx.MagicContainers.recreate_pod(client, "app-1", "pod-1")
+    end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 404, message: "Not found"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :post, "/mc/apps/app-1/pods/pod-1/recreate", _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} =
+               Bunnyx.MagicContainers.recreate_pod(client, "app-1", "pod-1")
     end
   end
 
@@ -446,6 +799,16 @@ defmodule Bunnyx.MagicContainersTest do
 
       assert {:ok, %{"maxApps" => 10}} = Bunnyx.MagicContainers.get_limits(client)
     end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 500, message: "Server error"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :get, "/mc/limits", _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} = Bunnyx.MagicContainers.get_limits(client)
+    end
   end
 
   # -- Log Forwarding --
@@ -459,6 +822,16 @@ defmodule Bunnyx.MagicContainersTest do
       end)
 
       assert {:ok, [%{"id" => "lf-1"}]} = Bunnyx.MagicContainers.list_log_forwarding(client)
+    end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 500, message: "Server error"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :get, "/mc/log/forwarding", _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} = Bunnyx.MagicContainers.list_log_forwarding(client)
     end
   end
 
@@ -474,6 +847,16 @@ defmodule Bunnyx.MagicContainersTest do
 
       assert {:ok, _} = Bunnyx.MagicContainers.create_log_forwarding(client, config)
     end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 400, message: "Bad request"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :post, "/mc/log/forwarding", _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} = Bunnyx.MagicContainers.create_log_forwarding(client, %{})
+    end
   end
 
   describe "delete_log_forwarding/2" do
@@ -483,6 +866,310 @@ defmodule Bunnyx.MagicContainersTest do
       end)
 
       assert {:ok, nil} = Bunnyx.MagicContainers.delete_log_forwarding(client, "lf-1")
+    end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 404, message: "Not found"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :delete, "/mc/log/forwarding/lf-1", _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} = Bunnyx.MagicContainers.delete_log_forwarding(client, "lf-1")
+    end
+  end
+
+  describe "get_log_forwarding/2" do
+    test "returns a config", %{client: client} do
+      response = %{"id" => "lf-1", "type" => "http"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :get, "/mc/log/forwarding/lf-1", _opts ->
+        {:ok, response}
+      end)
+
+      assert {:ok, %{"id" => "lf-1"}} =
+               Bunnyx.MagicContainers.get_log_forwarding(client, "lf-1")
+    end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 404, message: "Not found"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :get, "/mc/log/forwarding/lf-1", _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} = Bunnyx.MagicContainers.get_log_forwarding(client, "lf-1")
+    end
+  end
+
+  describe "update_log_forwarding/3" do
+    test "sends updated config", %{client: client} do
+      response = %{"id" => "lf-1"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :put, "/mc/log/forwarding/lf-1", _opts ->
+        {:ok, response}
+      end)
+
+      assert {:ok, _} =
+               Bunnyx.MagicContainers.update_log_forwarding(client, "lf-1", %{"type" => "http"})
+    end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 500, message: "Server error"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :put, "/mc/log/forwarding/lf-1", _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} =
+               Bunnyx.MagicContainers.update_log_forwarding(client, "lf-1", %{})
+    end
+  end
+
+  describe "patch_container/4" do
+    test "sends changes", %{client: client} do
+      response = %{"id" => "c-1"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :patch, "/mc/apps/app-1/containers/c-1", opts ->
+        assert opts[:json]["image"] == "nginx:1.25"
+        {:ok, response}
+      end)
+
+      assert {:ok, _} =
+               Bunnyx.MagicContainers.patch_container(client, "app-1", "c-1", %{
+                 "image" => "nginx:1.25"
+               })
+    end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 500, message: "Server error"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :patch, "/mc/apps/app-1/containers/c-1", _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} =
+               Bunnyx.MagicContainers.patch_container(client, "app-1", "c-1", %{})
+    end
+  end
+
+  describe "update_endpoint/4" do
+    test "sends config", %{client: client} do
+      response = %{"id" => "ep-1"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :put, "/mc/apps/app-1/endpoints/ep-1", _opts ->
+        {:ok, response}
+      end)
+
+      assert {:ok, _} =
+               Bunnyx.MagicContainers.update_endpoint(client, "app-1", "ep-1", %{"type" => "CDN"})
+    end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 500, message: "Server error"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :put, "/mc/apps/app-1/endpoints/ep-1", _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} =
+               Bunnyx.MagicContainers.update_endpoint(client, "app-1", "ep-1", %{})
+    end
+  end
+
+  describe "get_region_settings/2" do
+    test "returns region settings", %{client: client} do
+      response = %{"baseRegion" => "DE"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :get, "/mc/apps/app-1/regions", _opts ->
+        {:ok, response}
+      end)
+
+      assert {:ok, %{"baseRegion" => "DE"}} =
+               Bunnyx.MagicContainers.get_region_settings(client, "app-1")
+    end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 404, message: "Not found"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :get, "/mc/apps/app-1/regions", _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} = Bunnyx.MagicContainers.get_region_settings(client, "app-1")
+    end
+  end
+
+  describe "update_region_settings/3" do
+    test "sends config", %{client: client} do
+      response = %{"baseRegion" => "US"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :put, "/mc/apps/app-1/regions", _opts ->
+        {:ok, response}
+      end)
+
+      assert {:ok, _} =
+               Bunnyx.MagicContainers.update_region_settings(client, "app-1", %{
+                 "baseRegion" => "US"
+               })
+    end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 500, message: "Server error"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :put, "/mc/apps/app-1/regions", _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} =
+               Bunnyx.MagicContainers.update_region_settings(client, "app-1", %{})
+    end
+  end
+
+  describe "update_volume/4" do
+    test "sends config", %{client: client} do
+      response = %{"id" => "vol-1"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :put, "/mc/apps/app-1/volumes/vol-1", _opts ->
+        {:ok, response}
+      end)
+
+      assert {:ok, _} =
+               Bunnyx.MagicContainers.update_volume(client, "app-1", "vol-1", %{"size" => 10})
+    end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 500, message: "Server error"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :put, "/mc/apps/app-1/volumes/vol-1", _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} =
+               Bunnyx.MagicContainers.update_volume(client, "app-1", "vol-1", %{})
+    end
+  end
+
+  describe "delete_volume_instance/4" do
+    test "returns {:ok, nil}", %{client: client} do
+      expect(Bunnyx.HTTP, :request, fn _req,
+                                       :delete,
+                                       "/mc/apps/app-1/volumes/vol-1/instances/inst-1",
+                                       _opts ->
+        {:ok, ""}
+      end)
+
+      assert {:ok, nil} =
+               Bunnyx.MagicContainers.delete_volume_instance(client, "app-1", "vol-1", "inst-1")
+    end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 404, message: "Not found"}
+
+      expect(Bunnyx.HTTP, :request, fn _req,
+                                       :delete,
+                                       "/mc/apps/app-1/volumes/vol-1/instances/inst-1",
+                                       _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} =
+               Bunnyx.MagicContainers.delete_volume_instance(client, "app-1", "vol-1", "inst-1")
+    end
+  end
+
+  describe "delete_all_volume_instances/3" do
+    test "returns {:ok, nil}", %{client: client} do
+      expect(Bunnyx.HTTP, :request, fn _req,
+                                       :delete,
+                                       "/mc/apps/app-1/volumes/vol-1/instances",
+                                       _opts ->
+        {:ok, ""}
+      end)
+
+      assert {:ok, nil} =
+               Bunnyx.MagicContainers.delete_all_volume_instances(client, "app-1", "vol-1")
+    end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 500, message: "Server error"}
+
+      expect(Bunnyx.HTTP, :request, fn _req,
+                                       :delete,
+                                       "/mc/apps/app-1/volumes/vol-1/instances",
+                                       _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} =
+               Bunnyx.MagicContainers.delete_all_volume_instances(client, "app-1", "vol-1")
+    end
+  end
+
+  describe "list_image_tags/2" do
+    test "returns tags", %{client: client} do
+      response = %{"tags" => ["latest", "1.0"]}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :post, "/mc/registries/images/tags", _opts ->
+        {:ok, response}
+      end)
+
+      assert {:ok, _} = Bunnyx.MagicContainers.list_image_tags(client, %{"image" => "nginx"})
+    end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 500, message: "Server error"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :post, "/mc/registries/images/tags", _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} = Bunnyx.MagicContainers.list_image_tags(client, %{})
+    end
+  end
+
+  describe "get_image_digest/2" do
+    test "returns digest", %{client: client} do
+      response = %{"digest" => "sha256:abc"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :post, "/mc/registries/images/digest", _opts ->
+        {:ok, response}
+      end)
+
+      assert {:ok, _} = Bunnyx.MagicContainers.get_image_digest(client, %{"image" => "nginx"})
+    end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 500, message: "Server error"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :post, "/mc/registries/images/digest", _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} = Bunnyx.MagicContainers.get_image_digest(client, %{})
+    end
+  end
+
+  describe "get_config_suggestions/2" do
+    test "returns suggestions", %{client: client} do
+      response = %{"cpu" => "0.5", "memory" => "512Mi"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :post, "/mc/registries/config-suggestions", _opts ->
+        {:ok, response}
+      end)
+
+      assert {:ok, _} =
+               Bunnyx.MagicContainers.get_config_suggestions(client, %{"image" => "nginx"})
+    end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 500, message: "Server error"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :post, "/mc/registries/config-suggestions", _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} = Bunnyx.MagicContainers.get_config_suggestions(client, %{})
     end
   end
 end

@@ -87,6 +87,16 @@ defmodule Bunnyx.StreamTest do
       assert {:ok, %Bunnyx.Stream.Video{title: "New Video"}} =
                Bunnyx.Stream.create(client, title: "New Video")
     end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 400, message: "Bad request"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :post, "/library/90001/videos", _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} = Bunnyx.Stream.create(client, title: "Bad")
+    end
   end
 
   describe "update/3" do
@@ -101,6 +111,16 @@ defmodule Bunnyx.StreamTest do
       assert {:ok, %Bunnyx.Stream.Video{title: "Updated"}} =
                Bunnyx.Stream.update(client, "abc-123", title: "Updated")
     end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 500, message: "Server error"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :post, "/library/90001/videos/abc-123", _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} = Bunnyx.Stream.update(client, "abc-123", title: "Bad")
+    end
   end
 
   describe "delete/2" do
@@ -110,6 +130,16 @@ defmodule Bunnyx.StreamTest do
       end)
 
       assert {:ok, nil} = Bunnyx.Stream.delete(client, "abc-123")
+    end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 404, message: "Not found"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :delete, "/library/90001/videos/abc-123", _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} = Bunnyx.Stream.delete(client, "abc-123")
     end
   end
 
@@ -121,6 +151,16 @@ defmodule Bunnyx.StreamTest do
       end)
 
       assert {:ok, nil} = Bunnyx.Stream.upload(client, "abc-123", <<0, 1, 2, 3>>)
+    end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 500, message: "Server error"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :put, "/library/90001/videos/abc-123", _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} = Bunnyx.Stream.upload(client, "abc-123", <<0>>)
     end
   end
 
@@ -135,6 +175,16 @@ defmodule Bunnyx.StreamTest do
 
       assert {:ok, %Bunnyx.Stream.Video{}} =
                Bunnyx.Stream.fetch(client, url: "https://example.com/video.mp4", title: "Fetched")
+    end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 400, message: "Bad request"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :post, "/library/90001/videos/fetch", _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} = Bunnyx.Stream.fetch(client, url: "https://bad.url")
     end
   end
 
@@ -174,6 +224,16 @@ defmodule Bunnyx.StreamTest do
       end)
 
       assert {:ok, %{"videoPlaylistUrl" => _}} = Bunnyx.Stream.video_play_data(client, "abc-123")
+    end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 404, message: "Not found"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :get, "/library/90001/videos/abc-123/play", _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} = Bunnyx.Stream.video_play_data(client, "abc-123")
     end
   end
 
@@ -355,6 +415,16 @@ defmodule Bunnyx.StreamTest do
       assert {:ok, %Bunnyx.Stream.Collection{name: "My Collection"}} =
                Bunnyx.Stream.get_collection(client, "col-123")
     end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 404, message: "Not found"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :get, "/library/90001/collections/bad-id", _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} = Bunnyx.Stream.get_collection(client, "bad-id")
+    end
   end
 
   describe "create_collection/2" do
@@ -396,6 +466,19 @@ defmodule Bunnyx.StreamTest do
 
       assert {:ok, nil} = Bunnyx.Stream.delete_collection(client, "col-123")
     end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 404, message: "Not found"}
+
+      expect(Bunnyx.HTTP, :request, fn _req,
+                                       :delete,
+                                       "/library/90001/collections/col-123",
+                                       _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} = Bunnyx.Stream.delete_collection(client, "col-123")
+    end
   end
 
   # -- Video metadata --
@@ -417,6 +500,20 @@ defmodule Bunnyx.StreamTest do
 
       assert {:ok, nil} =
                Bunnyx.Stream.add_caption(client, "abc-123", "en", "English", "base64data")
+    end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 500, message: "Server error"}
+
+      expect(Bunnyx.HTTP, :request, fn _req,
+                                       :post,
+                                       "/library/90001/videos/abc-123/captions/en",
+                                       _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} =
+               Bunnyx.Stream.add_caption(client, "abc-123", "en", "English", "data")
     end
   end
 
@@ -458,6 +555,19 @@ defmodule Bunnyx.StreamTest do
       end)
 
       assert {:ok, nil} = Bunnyx.Stream.reencode(client, "abc-123")
+    end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 500, message: "Server error"}
+
+      expect(Bunnyx.HTTP, :request, fn _req,
+                                       :post,
+                                       "/library/90001/videos/abc-123/reencode",
+                                       _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} = Bunnyx.Stream.reencode(client, "abc-123")
     end
   end
 

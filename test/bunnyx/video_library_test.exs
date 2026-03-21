@@ -80,6 +80,16 @@ defmodule Bunnyx.VideoLibraryTest do
       assert {:ok, %Bunnyx.VideoLibrary{name: "new-lib"}} =
                Bunnyx.VideoLibrary.create(client, name: "new-lib", replication_regions: ["NY"])
     end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 400, message: "Bad request"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :post, "/videolibrary", _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} = Bunnyx.VideoLibrary.create(client, name: "bad")
+    end
   end
 
   describe "update/3" do
@@ -94,6 +104,17 @@ defmodule Bunnyx.VideoLibraryTest do
       assert {:ok, %Bunnyx.VideoLibrary{enable_transcribing: true}} =
                Bunnyx.VideoLibrary.update(client, 90_001, enable_transcribing: true)
     end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 500, message: "Server error"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :post, "/videolibrary/90001", _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} =
+               Bunnyx.VideoLibrary.update(client, 90_001, enable_transcribing: true)
+    end
   end
 
   describe "delete/2" do
@@ -103,6 +124,16 @@ defmodule Bunnyx.VideoLibraryTest do
       end)
 
       assert {:ok, nil} = Bunnyx.VideoLibrary.delete(client, 90_001)
+    end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 404, message: "Not found"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :delete, "/videolibrary/90001", _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} = Bunnyx.VideoLibrary.delete(client, 90_001)
     end
   end
 
@@ -136,6 +167,16 @@ defmodule Bunnyx.VideoLibraryTest do
       end)
 
       assert {:ok, nil} = Bunnyx.VideoLibrary.reset_api_key(client, 90_001)
+    end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 500, message: "Server error"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :post, "/videolibrary/90001/resetApiKey", _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} = Bunnyx.VideoLibrary.reset_api_key(client, 90_001)
     end
   end
 
@@ -180,6 +221,16 @@ defmodule Bunnyx.VideoLibraryTest do
       end)
 
       assert {:ok, nil} = Bunnyx.VideoLibrary.add_watermark(client, 90_001, <<0, 1, 2, 3>>)
+    end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 500, message: "Server error"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :put, "/videolibrary/90001/watermark", _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} = Bunnyx.VideoLibrary.add_watermark(client, 90_001, <<0>>)
     end
   end
 
@@ -294,6 +345,16 @@ defmodule Bunnyx.VideoLibraryTest do
 
       assert {:ok, %{"TotalLicensesIssued" => 100}} =
                Bunnyx.VideoLibrary.drm_statistics(client, 90_001)
+    end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 500, message: "Server error"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :get, "/videolibrary/90001/drm/statistics", _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} = Bunnyx.VideoLibrary.drm_statistics(client, 90_001)
     end
   end
 

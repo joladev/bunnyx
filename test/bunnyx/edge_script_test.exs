@@ -24,6 +24,16 @@ defmodule Bunnyx.EdgeScriptTest do
       assert [%{"Id" => 1}] = page.items
       assert page.total_items == 1
     end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 500, message: "Server error"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :get, "/compute/script", _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} = Bunnyx.EdgeScript.list(client)
+    end
   end
 
   describe "get/2" do
@@ -35,6 +45,16 @@ defmodule Bunnyx.EdgeScriptTest do
       end)
 
       assert {:ok, %{"Id" => 1}} = Bunnyx.EdgeScript.get(client, 1)
+    end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 404, message: "Not found"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :get, "/compute/script/999", _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} = Bunnyx.EdgeScript.get(client, 999)
     end
   end
 
@@ -50,6 +70,16 @@ defmodule Bunnyx.EdgeScriptTest do
       assert {:ok, %{"Id" => 1}} =
                Bunnyx.EdgeScript.create(client, name: "new-script", script_type: 1)
     end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 400, message: "Bad request"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :post, "/compute/script", _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} = Bunnyx.EdgeScript.create(client, name: "bad", script_type: 1)
+    end
   end
 
   describe "update/3" do
@@ -63,6 +93,16 @@ defmodule Bunnyx.EdgeScriptTest do
 
       assert {:ok, _} = Bunnyx.EdgeScript.update(client, 1, name: "updated")
     end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 500, message: "Server error"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :post, "/compute/script/1", _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} = Bunnyx.EdgeScript.update(client, 1, name: "bad")
+    end
   end
 
   describe "delete/2" do
@@ -72,6 +112,16 @@ defmodule Bunnyx.EdgeScriptTest do
       end)
 
       assert {:ok, nil} = Bunnyx.EdgeScript.delete(client, 1)
+    end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 404, message: "Not found"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :delete, "/compute/script/1", _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} = Bunnyx.EdgeScript.delete(client, 1)
     end
   end
 
@@ -84,6 +134,16 @@ defmodule Bunnyx.EdgeScriptTest do
       end)
 
       assert {:ok, %{"TotalRequests" => 1000}} = Bunnyx.EdgeScript.statistics(client, 1)
+    end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 500, message: "Server error"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :get, "/compute/script/1/statistics", _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} = Bunnyx.EdgeScript.statistics(client, 1)
     end
   end
 
@@ -110,6 +170,16 @@ defmodule Bunnyx.EdgeScriptTest do
 
       assert {:ok, %{"Code" => "export default {}"}} = Bunnyx.EdgeScript.get_code(client, 1)
     end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 404, message: "Not found"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :get, "/compute/script/1/code", _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} = Bunnyx.EdgeScript.get_code(client, 1)
+    end
   end
 
   describe "set_code/3" do
@@ -120,6 +190,16 @@ defmodule Bunnyx.EdgeScriptTest do
       end)
 
       assert {:ok, nil} = Bunnyx.EdgeScript.set_code(client, 1, "export default {}")
+    end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 500, message: "Server error"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :post, "/compute/script/1/code", _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} = Bunnyx.EdgeScript.set_code(client, 1, "bad code")
     end
   end
 
@@ -134,6 +214,16 @@ defmodule Bunnyx.EdgeScriptTest do
       end)
 
       assert {:ok, %{"Items" => _}} = Bunnyx.EdgeScript.list_releases(client, 1)
+    end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 500, message: "Server error"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :get, "/compute/script/1/releases", _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} = Bunnyx.EdgeScript.list_releases(client, 1)
     end
   end
 
@@ -157,6 +247,16 @@ defmodule Bunnyx.EdgeScriptTest do
       end)
 
       assert {:ok, nil} = Bunnyx.EdgeScript.publish_release(client, 1, note: "v1.0")
+    end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 500, message: "Server error"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :post, "/compute/script/1/publish", _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} = Bunnyx.EdgeScript.publish_release(client, 1)
     end
   end
 
@@ -182,6 +282,16 @@ defmodule Bunnyx.EdgeScriptTest do
       end)
 
       assert {:ok, nil} = Bunnyx.EdgeScript.add_secret(client, 1, "API_KEY", "sk-123")
+    end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 400, message: "Bad request"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :post, "/compute/script/1/secrets", _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} = Bunnyx.EdgeScript.add_secret(client, 1, "KEY", "val")
     end
   end
 
@@ -278,6 +388,16 @@ defmodule Bunnyx.EdgeScriptTest do
       end)
 
       assert {:ok, nil} = Bunnyx.EdgeScript.delete_variable(client, 1, 42)
+    end
+
+    test "returns error on failure", %{client: client} do
+      error = %Bunnyx.Error{status: 404, message: "Not found"}
+
+      expect(Bunnyx.HTTP, :request, fn _req, :delete, "/compute/script/1/variables/42", _opts ->
+        {:error, error}
+      end)
+
+      assert {:error, ^error} = Bunnyx.EdgeScript.delete_variable(client, 1, 42)
     end
   end
 end
