@@ -68,6 +68,7 @@ defmodule Bunnyx.MixProject do
           Bunnyx.Stream.Video,
           Bunnyx.Stream.Collection,
           Bunnyx.Shield.Zone,
+          Bunnyx.MagicContainers.App,
           Bunnyx.S3.XML
         ]
       ]

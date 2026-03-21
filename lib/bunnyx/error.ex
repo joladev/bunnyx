@@ -17,5 +17,6 @@ defmodule Bunnyx.Error do
           errors: [map()] | nil
         }
 
+  @derive {Inspect, only: [:status, :message]}
   defstruct [:status, :message, :errors]
 end
