@@ -38,7 +38,7 @@ defmodule Bunnyx.StreamTest do
         {:ok, response}
       end)
 
-      Bunnyx.Stream.list(client, page: 2, items_per_page: 10, search: "test")
+      Bunnyx.Stream.list(client, page: 2, per_page: 10, search: "test")
     end
 
     test "returns error on failure", %{client: client} do

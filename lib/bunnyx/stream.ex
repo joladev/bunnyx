@@ -65,7 +65,7 @@ defmodule Bunnyx.Stream do
   ## Options
 
     * `:page` — page number
-    * `:items_per_page` — items per page
+    * `:per_page` — items per page
     * `:search` — search term
     * `:collection` — filter by collection ID
     * `:order_by` — sort field (default `"date"`)
@@ -77,7 +77,7 @@ defmodule Bunnyx.Stream do
              items: [Video.t()],
              current_page: integer(),
              total_items: integer(),
-             items_per_page: integer()
+             per_page: integer()
            }}
           | {:error, Bunnyx.Error.t()}
   def list(client, opts \\ []) do
@@ -93,7 +93,7 @@ defmodule Bunnyx.Stream do
            items: Enum.map(body["items"], &Video.from_response/1),
            current_page: body["currentPage"],
            total_items: body["totalItems"],
-           items_per_page: body["itemsPerPage"]
+           per_page: body["itemsPerPage"]
          }}
 
       {:error, _} = error ->
@@ -236,7 +236,7 @@ defmodule Bunnyx.Stream do
   ## Options
 
     * `:page` — page number
-    * `:items_per_page` — items per page
+    * `:per_page` — items per page
     * `:search` — search term
     * `:order_by` — sort field
     * `:include_thumbnails` — include preview image URLs
@@ -248,7 +248,7 @@ defmodule Bunnyx.Stream do
              items: [Collection.t()],
              current_page: integer(),
              total_items: integer(),
-             items_per_page: integer()
+             per_page: integer()
            }}
           | {:error, Bunnyx.Error.t()}
   def list_collections(client, opts \\ []) do
@@ -264,7 +264,7 @@ defmodule Bunnyx.Stream do
            items: Enum.map(body["items"], &Collection.from_response/1),
            current_page: body["currentPage"],
            total_items: body["totalItems"],
-           items_per_page: body["itemsPerPage"]
+           per_page: body["itemsPerPage"]
          }}
 
       {:error, _} = error ->
@@ -712,14 +712,14 @@ defmodule Bunnyx.Stream do
   defp to_collection_params(opts) do
     mapping = %{
       page: "page",
-      items_per_page: "itemsPerPage",
+      per_page: "itemsPerPage",
       search: "search",
       order_by: "orderBy",
       include_thumbnails: "includeThumbnails"
     }
 
     opts
-    |> Keyword.take([:page, :items_per_page, :search, :order_by, :include_thumbnails])
+    |> Keyword.take([:page, :per_page, :search, :order_by, :include_thumbnails])
     |> Map.new(fn {key, value} ->
       {Map.fetch!(mapping, key), value}
     end)
@@ -728,14 +728,14 @@ defmodule Bunnyx.Stream do
   defp to_query_params(opts) do
     mapping = %{
       page: "page",
-      items_per_page: "itemsPerPage",
+      per_page: "itemsPerPage",
       search: "search",
       collection: "collection",
       order_by: "orderBy"
     }
 
     opts
-    |> Keyword.take([:page, :items_per_page, :search, :collection, :order_by])
+    |> Keyword.take([:page, :per_page, :search, :collection, :order_by])
     |> Map.new(fn {key, value} ->
       {Map.fetch!(mapping, key), value}
     end)

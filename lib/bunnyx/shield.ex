@@ -46,7 +46,7 @@ defmodule Bunnyx.Shield do
   ## Options
 
     * `:page` — page number
-    * `:page_size` — items per page
+    * `:per_page` — items per page
 
   """
   @spec list(Bunnyx.t() | keyword(), keyword()) ::
@@ -970,10 +970,10 @@ defmodule Bunnyx.Shield do
   defp format_date(date) when is_binary(date), do: date
 
   defp to_page_params(opts) do
-    mapping = %{page: "page", page_size: "pageSize"}
+    mapping = %{page: "page", per_page: "pageSize"}
 
     opts
-    |> Keyword.take([:page, :page_size])
+    |> Keyword.take([:page, :per_page])
     |> Map.new(fn {key, value} ->
       {Map.fetch!(mapping, key), value}
     end)

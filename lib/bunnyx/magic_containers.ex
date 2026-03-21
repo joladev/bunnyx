@@ -26,7 +26,7 @@ defmodule Bunnyx.MagicContainers do
 
   ## Options
 
-    * `:limit` — results per page (1–1000, default 20)
+    * `:per_page` — results per page (1–1000, default 20)
     * `:next_cursor` — pagination cursor
 
   """
@@ -716,10 +716,10 @@ defmodule Bunnyx.MagicContainers do
   end
 
   defp to_list_params(opts) do
-    mapping = %{limit: "limit", next_cursor: "nextCursor"}
+    mapping = %{per_page: "limit", next_cursor: "nextCursor"}
 
     opts
-    |> Keyword.take([:limit, :next_cursor])
+    |> Keyword.take([:per_page, :next_cursor])
     |> Map.new(fn {key, value} ->
       {Map.fetch!(mapping, key), value}
     end)
