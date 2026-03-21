@@ -31,6 +31,7 @@ defmodule Bunnyx.MixProject do
   defp deps do
     [
       {:req, "~> 0.5"},
+      {:telemetry, "~> 1.0"},
       {:ex_doc, "~> 0.35", only: :dev, runtime: false},
       {:mimic, "~> 2.0", only: :test},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false}

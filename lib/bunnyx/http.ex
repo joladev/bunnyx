@@ -3,6 +3,23 @@ defmodule Bunnyx.HTTP do
   Low-level HTTP layer. All API modules go through `request/4` — they never
   call Req directly. You shouldn't need to use this module unless you're
   extending Bunnyx with unsupported endpoints.
+
+  ## Telemetry
+
+  The following telemetry events are emitted:
+
+    * `[:bunnyx, :request, :start]` — before the request is sent.
+      Measurements: `%{system_time: integer}`.
+      Metadata: `%{method: atom, path: String.t}`.
+
+    * `[:bunnyx, :request, :stop]` — after a successful response.
+      Measurements: `%{duration: integer}` (native time units).
+      Metadata: `%{method: atom, path: String.t, status: integer}`.
+
+    * `[:bunnyx, :request, :exception]` — on transport error.
+      Measurements: `%{duration: integer}`.
+      Metadata: `%{method: atom, path: String.t, kind: :error, reason: term}`.
+
   """
 
   @type method :: :get | :head | :post | :put | :patch | :delete
@@ -29,8 +46,25 @@ defmodule Bunnyx.HTTP do
     req_opts = [{:method, method}, {:url, path} | req_opts]
     req_opts = if timeout, do: [{:receive_timeout, timeout} | req_opts], else: req_opts
 
+    metadata = %{method: method, path: path}
+    start_time = System.monotonic_time()
+
+    :telemetry.execute(
+      [:bunnyx, :request, :start],
+      %{system_time: System.system_time()},
+      metadata
+    )
+
     case Req.request(req, req_opts) do
       {:ok, %Req.Response{status: status} = response} when status in 200..299 ->
+        duration = System.monotonic_time() - start_time
+
+        :telemetry.execute(
+          [:bunnyx, :request, :stop],
+          %{duration: duration},
+          Map.put(metadata, :status, status)
+        )
+
         cond do
           method == :head -> {:ok, response.headers}
           return_headers -> {:ok, {response.body, response.headers}}
@@ -38,6 +72,14 @@ defmodule Bunnyx.HTTP do
         end
 
       {:ok, %Req.Response{status: status, body: body}} ->
+        duration = System.monotonic_time() - start_time
+
+        :telemetry.execute(
+          [:bunnyx, :request, :stop],
+          %{duration: duration},
+          Map.put(metadata, :status, status)
+        )
+
         {:error,
          %Bunnyx.Error{
            status: status,
@@ -46,6 +88,14 @@ defmodule Bunnyx.HTTP do
          }}
 
       {:error, exception} ->
+        duration = System.monotonic_time() - start_time
+
+        :telemetry.execute(
+          [:bunnyx, :request, :exception],
+          %{duration: duration},
+          Map.merge(metadata, %{kind: :error, reason: exception})
+        )
+
         {:error, %Bunnyx.Error{message: sanitize(Exception.message(exception))}}
     end
   end
