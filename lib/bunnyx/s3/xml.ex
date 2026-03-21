@@ -111,9 +111,22 @@ defmodule Bunnyx.S3.XML do
 
   defp parse(xml) do
     charlist = String.to_charlist(xml)
-    {doc, _} = :xmerl_scan.string(charlist, quiet: true)
+
+    {doc, _} =
+      :xmerl_scan.string(charlist,
+        quiet: true,
+        acc_fun: &xmerl_acc/3,
+        fetch_fun: &xmerl_fetch/2
+      )
+
     doc
   end
+
+  # Disable external entity fetching to prevent XXE attacks.
+  defp xmerl_fetch(_uri, state), do: {:ok, {:string, ~c""}, state}
+
+  # Default accumulator — required when overriding fetch_fun.
+  defp xmerl_acc(parsed, acc, state), do: {[parsed | acc], state}
 
   defp xpath_all(doc, path) do
     :xmerl_xpath.string(path, doc)

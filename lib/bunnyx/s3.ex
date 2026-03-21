@@ -143,7 +143,7 @@ defmodule Bunnyx.S3 do
     params = Map.merge(%{"list-type" => "2"}, to_list_params(opts))
 
     case Bunnyx.HTTP.request(client.req, :get, "/#{client.zone}", params: params) do
-      {:ok, body} -> {:ok, XML.parse_list_objects(body)}
+      {:ok, body} -> safe_parse(body, &XML.parse_list_objects/1)
       {:error, _} = error -> error
     end
   end
@@ -158,7 +158,7 @@ defmodule Bunnyx.S3 do
     case Bunnyx.HTTP.request(client.req, :put, "/#{client.zone}/#{destination_key}",
            headers: [{"x-amz-copy-source", "/#{client.zone}/#{source_key}"}]
          ) do
-      {:ok, body} -> {:ok, XML.parse_copy_result(body)}
+      {:ok, body} -> safe_parse(body, &XML.parse_copy_result/1)
       {:error, _} = error -> error
     end
   end
@@ -186,8 +186,10 @@ defmodule Bunnyx.S3 do
            params: %{"uploads" => ""}
          ) do
       {:ok, body} ->
-        %{upload_id: upload_id} = XML.parse_initiate_multipart(body)
-        {:ok, upload_id}
+        case safe_parse(body, &XML.parse_initiate_multipart/1) do
+          {:ok, %{upload_id: upload_id}} -> {:ok, upload_id}
+          {:error, _} = error -> error
+        end
 
       {:error, _} = error ->
         error
@@ -231,7 +233,7 @@ defmodule Bunnyx.S3 do
            params: %{"uploadId" => upload_id},
            body: XML.build_complete_body(parts)
          ) do
-      {:ok, body} -> {:ok, XML.parse_complete_multipart(body)}
+      {:ok, body} -> safe_parse(body, &XML.parse_complete_multipart/1)
       {:error, _} = error -> error
     end
   end
@@ -260,7 +262,7 @@ defmodule Bunnyx.S3 do
     case Bunnyx.HTTP.request(client.req, :get, "/#{client.zone}/#{key}",
            params: %{"uploadId" => upload_id}
          ) do
-      {:ok, body} -> {:ok, XML.parse_list_parts(body)}
+      {:ok, body} -> safe_parse(body, &XML.parse_list_parts/1)
       {:error, _} = error -> error
     end
   end
@@ -273,7 +275,7 @@ defmodule Bunnyx.S3 do
     client = resolve(client)
 
     case Bunnyx.HTTP.request(client.req, :get, "/#{client.zone}", params: %{"uploads" => ""}) do
-      {:ok, body} -> {:ok, XML.parse_list_multipart_uploads(body)}
+      {:ok, body} -> safe_parse(body, &XML.parse_list_multipart_uploads/1)
       {:error, _} = error -> error
     end
   end
@@ -305,6 +307,12 @@ defmodule Bunnyx.S3 do
       {:ok, range} -> [{"range", range}]
       :error -> nil
     end
+  end
+
+  defp safe_parse(body, parser) do
+    {:ok, parser.(body)}
+  rescue
+    e -> {:error, %Bunnyx.Error{message: "Failed to parse XML response: #{Exception.message(e)}"}}
   end
 
   defp maybe_put(opts, _key, nil), do: opts

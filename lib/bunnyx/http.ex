@@ -101,7 +101,14 @@ defmodule Bunnyx.HTTP do
   end
 
   defp extract_message(%{"Message" => message}) when is_binary(message), do: message
-  defp extract_message(body) when is_binary(body), do: body
+
+  defp extract_message(body) when is_binary(body) do
+    case Regex.run(~r/<Message>([^<]+)<\/Message>/, body) do
+      [_, message] -> message
+      nil -> body
+    end
+  end
+
   defp extract_message(_), do: "Unknown error"
 
   defp extract_errors(%{"Errors" => errors}) when is_list(errors), do: errors
