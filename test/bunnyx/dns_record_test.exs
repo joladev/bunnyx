@@ -43,16 +43,13 @@ defmodule Bunnyx.DnsRecordTest do
   end
 
   describe "update/4" do
-    test "sends POST with JSON body and returns parsed record", %{client: client} do
-      response = Bunnyx.Factory.dns_record_response(%{"Ttl" => 600})
-
+    test "sends POST with JSON body and returns {:ok, nil}", %{client: client} do
       expect(Bunnyx.HTTP, :request, fn _req, :post, "/dnszone/50001/records/99001", opts ->
         assert opts[:json] == %{"Ttl" => 600}
-        {:ok, response}
+        {:ok, ""}
       end)
 
-      assert {:ok, %Bunnyx.DnsRecord{ttl: 600}} =
-               Bunnyx.DnsRecord.update(client, 50_001, 99_001, ttl: 600)
+      assert {:ok, nil} = Bunnyx.DnsRecord.update(client, 50_001, 99_001, ttl: 600)
     end
   end
 

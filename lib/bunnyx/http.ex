@@ -84,6 +84,8 @@ defmodule Bunnyx.HTTP do
          %Bunnyx.Error{
            status: status,
            message: extract_message(body),
+           method: method,
+           path: path,
            errors: extract_errors(body)
          }}
 
@@ -96,7 +98,12 @@ defmodule Bunnyx.HTTP do
           Map.merge(metadata, %{kind: :error, reason: exception})
         )
 
-        {:error, %Bunnyx.Error{message: sanitize(Exception.message(exception))}}
+        {:error,
+         %Bunnyx.Error{
+           message: sanitize(Exception.message(exception)),
+           method: method,
+           path: path
+         }}
     end
   end
 

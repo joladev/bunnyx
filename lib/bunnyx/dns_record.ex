@@ -103,14 +103,14 @@ defmodule Bunnyx.DnsRecord do
 
   @doc "Updates a DNS record."
   @spec update(Bunnyx.t() | keyword(), pos_integer(), pos_integer(), keyword()) ::
-          {:ok, t()} | {:error, Bunnyx.Error.t()}
+          {:ok, nil} | {:error, Bunnyx.Error.t()}
   def update(client, zone_id, id, attrs) do
     client = Bunnyx.resolve(client)
 
     case Bunnyx.HTTP.request(client.req, :post, "/dnszone/#{zone_id}/records/#{id}",
            json: to_request_body(attrs)
          ) do
-      {:ok, body} -> {:ok, from_response(body)}
+      {:ok, _} -> {:ok, nil}
       {:error, _} = error -> error
     end
   end

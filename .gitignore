@@ -23,3 +23,5 @@ erl_crash.dump
 bunnyx-*.tar
 
 .mcp.json
+
+.env

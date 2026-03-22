@@ -10,9 +10,12 @@ Full API verification against the real bunny.net API. Run all cells top to botto
 Mix.install([{:bunnyx, path: Path.join(__DIR__, "..")}])
 
 api_key = System.fetch_env!("LB_BUNNY_API_KEY")
-client = Bunnyx.new(api_key: api_key)
+client = Bunnyx.new(api_key: api_key, receive_timeout: 30_000)
 
-IO.puts("Client ready")
+# Unique suffix per run — avoids collisions with zones still being deleted
+run_id = System.system_time(:second) |> rem(100_000) |> to_string()
+
+IO.puts("Client ready (run_id: #{run_id})")
 :ok
 ```
 
@@ -25,39 +28,63 @@ items = fn
   %{items: items} -> items
 end
 
-# Clean up storage zones
+IO.puts("  Listing storage zones...")
 {:ok, all_sz} = Bunnyx.StorageZone.list(client)
 
-for z <- Enum.filter(items.(all_sz), &String.starts_with?(&1.name, "bunnyx-int-")) do
-  storage = Bunnyx.Storage.new(storage_key: z.password, zone: z.name)
-  Bunnyx.Storage.delete(storage, "/test.txt")
-  {:ok, nil} = Bunnyx.StorageZone.delete(client, z.id)
-  IO.puts("  Deleted storage zone: #{z.name}")
+cleanup = fn name, result ->
+  case result do
+    {:ok, _} -> IO.puts("  Deleted #{name}")
+    {:error, e} -> IO.puts("  Failed to delete #{name}: #{e.message}")
+  end
 end
 
-# Clean up pull zones
-{:ok, all_pz} = Bunnyx.PullZone.list(client, search: "bunnyx-int-")
+stale_sz = Enum.filter(items.(all_sz), &String.starts_with?(&1.name, "bunnyx-int-"))
+IO.puts("  Found #{length(stale_sz)} storage zone(s) to clean up")
 
-for z <- items.(all_pz) do
-  Bunnyx.PullZone.delete(client, z.id)
-  IO.puts("  Deleted pull zone: #{z.name}")
+for z <- stale_sz do
+  IO.puts("  Deleting storage zone #{z.name}...")
+  cleanup.(z.name, Bunnyx.StorageZone.delete(client, z.id))
 end
 
-# Clean up DNS zones
-{:ok, all_dns} = Bunnyx.DnsZone.list(client, search: "bunnyx-int-")
+safe_list_and_delete = fn label, list_fn, name_fn, delete_fn ->
+  IO.puts("  Listing #{label}...")
 
-for z <- items.(all_dns) do
-  Bunnyx.DnsZone.delete(client, z.id)
-  IO.puts("  Deleted DNS zone: #{z.domain}")
+  case list_fn.() do
+    {:ok, result} ->
+      all = items.(result)
+      stale = Enum.filter(all, fn z -> String.starts_with?(name_fn.(z), "bunnyx-int-") end)
+      IO.puts("  Found #{length(stale)} #{label} to clean up (out of #{length(all)} total)")
+
+      for z <- stale do
+        IO.puts("  Deleting: #{name_fn.(z)}...")
+        cleanup.(name_fn.(z), delete_fn.(z))
+      end
+
+    {:error, e} ->
+      IO.puts("  Skipped #{label} cleanup (#{e.message})")
+  end
 end
 
-# Clean up video libraries
-{:ok, all_vl} = Bunnyx.VideoLibrary.list(client, search: "bunnyx-int-")
+# Don't use search: param — bunny.net's pull zone search causes 504s.
+# List all and filter client-side instead.
 
-for lib <- items.(all_vl) do
-  Bunnyx.VideoLibrary.delete(client, lib.id)
-  IO.puts("  Deleted video library: #{lib.name}")
-end
+safe_list_and_delete.("pull zones",
+  fn -> Bunnyx.PullZone.list(client) end,
+  fn z -> z.name end,
+  fn z -> Bunnyx.PullZone.delete(client, z.id) end
+)
+
+safe_list_and_delete.("DNS zones",
+  fn -> Bunnyx.DnsZone.list(client) end,
+  fn z -> z.domain end,
+  fn z -> Bunnyx.DnsZone.delete(client, z.id) end
+)
+
+safe_list_and_delete.("video libraries",
+  fn -> Bunnyx.VideoLibrary.list(client) end,
+  fn lib -> lib.name end,
+  fn lib -> Bunnyx.VideoLibrary.delete(client, lib.id) end
+)
 
 IO.puts("✓ Cleanup done")
 ```
@@ -132,7 +159,7 @@ IO.puts("✓ Search: returned results")
 ### Create storage zone
 
 ```elixir
-sz_name = "bunnyx-int-sz"
+sz_name = "bunnyx-int-sz-#{run_id}"
 {:ok, sz} = Bunnyx.StorageZone.create(client, name: sz_name, region: "DE")
 %Bunnyx.StorageZone{} = sz
 ^sz_name = sz.name
@@ -209,7 +236,7 @@ IO.puts("✓ Deleted storage zone #{sz.id} — confirmed gone")
 ### Create pull zone
 
 ```elixir
-pz_name = "bunnyx-int-pz"
+pz_name = "bunnyx-int-pz-#{run_id}"
 
 {:ok, pz} = Bunnyx.PullZone.create(client, name: pz_name, origin_url: "https://example.com")
 %Bunnyx.PullZone{} = pz
@@ -225,9 +252,9 @@ pz
 {:ok, fetched} = Bunnyx.PullZone.get(client, pz.id)
 true = fetched.origin_url == "https://example.com"
 
-{:ok, all_pz} = Bunnyx.PullZone.list(client, search: pz_name)
+{:ok, all_pz} = Bunnyx.PullZone.list(client)
 pz_list = if is_list(all_pz), do: all_pz, else: all_pz.items
-true = length(pz_list) >= 1
+true = Enum.any?(pz_list, &(&1.id == pz.id))
 
 {:ok, updated} = Bunnyx.PullZone.update(client, pz.id, cache_control_max_age_override: 3600)
 true = updated.cache_control_max_age_override == 3600
@@ -286,7 +313,7 @@ IO.puts("✓ Deleted pull zone #{pz.id} — confirmed gone")
 ### Create DNS zone
 
 ```elixir
-dns_domain = "bunnyx-int-dns.test"
+dns_domain = "bunnyx-int-dns-#{run_id}.test"
 
 {:ok, dns} = Bunnyx.DnsZone.create(client, domain: dns_domain)
 %Bunnyx.DnsZone{} = dns
@@ -302,9 +329,9 @@ dns
 {:ok, fetched} = Bunnyx.DnsZone.get(client, dns.id)
 true = fetched.domain == dns_domain
 
-{:ok, all_dns} = Bunnyx.DnsZone.list(client, search: "bunnyx-int-dns")
+{:ok, all_dns} = Bunnyx.DnsZone.list(client)
 dns_list = if is_list(all_dns), do: all_dns, else: all_dns.items
-true = length(dns_list) >= 1
+true = Enum.any?(dns_list, &(&1.id == dns.id))
 
 IO.puts("✓ Get and List verified (#{length(fetched.records)} existing records)")
 ```
@@ -319,9 +346,8 @@ IO.puts("✓ Get and List verified (#{length(fetched.records)} existing records)
 true = record.name == "www"
 IO.puts("  Added A record: #{record.name} → #{record.value}")
 
-{:ok, updated} = Bunnyx.DnsRecord.update(client, dns.id, record.id, value: "5.6.7.8")
-true = updated.value == "5.6.7.8"
-IO.puts("  Updated to: #{updated.value}")
+{:ok, _} = Bunnyx.DnsRecord.update(client, dns.id, record.id, value: "5.6.7.8")
+IO.puts("  Updated record")
 
 {:ok, nil} = Bunnyx.DnsRecord.delete(client, dns.id, record.id)
 IO.puts("  Deleted record")
@@ -361,7 +387,7 @@ IO.puts("✓ Deleted DNS zone #{dns.id} — confirmed gone")
 ### Create video library
 
 ```elixir
-vl_name = "bunnyx-int-vl"
+vl_name = "bunnyx-int-vl-#{run_id}"
 
 {:ok, vl} = Bunnyx.VideoLibrary.create(client, name: vl_name)
 %Bunnyx.VideoLibrary{} = vl
@@ -378,9 +404,9 @@ vl
 {:ok, fetched} = Bunnyx.VideoLibrary.get(client, vl.id)
 true = fetched.name == vl_name
 
-{:ok, all_vl} = Bunnyx.VideoLibrary.list(client, search: vl_name)
+{:ok, all_vl} = Bunnyx.VideoLibrary.list(client)
 vl_list = if is_list(all_vl), do: all_vl, else: all_vl.items
-true = length(vl_list) >= 1
+true = Enum.any?(vl_list, &(&1.id == vl.id))
 
 {:ok, updated} = Bunnyx.VideoLibrary.update(client, vl.id, enable_mp4_fallback: true)
 true = updated.enable_mp4_fallback == true
@@ -532,4 +558,4 @@ IO.puts("  Telemetry ✓")
 IO.puts("═══════════════════════════════════════")
 ```
 
-<!-- livebook:{"offset":12779,"stamp":{"token":"XCP.JnipG0R8wVwOmy9aAD9LQb9UWSSPYTnR3fbzlOl6_99Cfo-ZTPFpM_rybJl4VFh8a3WM8nonY265xvIJRvstLgb-J9CGHtsYb6zsFUqqlq0xEwcbz_s4fg","version":2}} -->
+<!-- livebook:{"offset":13780,"stamp":{"token":"XCP.d6jLhB9U_cxOQOCtvwvXhTyGUhiX31CIyFJMTQvbwc31FelrZk9q9Bimd7e0H2es_ZzrMtN91qO2DSzTSRo2sPOI0fXg_yTrWYaJqRTJhiILFqwfBl1utA","version":2}} -->
