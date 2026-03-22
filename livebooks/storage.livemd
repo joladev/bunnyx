@@ -1,0 +1,177 @@
+# Bunnyx: Storage
+
+StorageZone CRUD + edge storage file operations.
+
+## Setup
+
+```elixir
+Mix.install([{:bunnyx, path: Path.join(__DIR__, "..")}])
+
+api_key = System.fetch_env!("LB_BUNNY_API_KEY")
+client = Bunnyx.new(api_key: api_key, receive_timeout: 60_000)
+run_id = System.system_time(:second) |> rem(100_000) |> to_string()
+sz_name = "bunnyx-int-sz-#{run_id}"
+
+IO.puts("Client ready. Zone: #{sz_name}")
+:ok
+```
+
+## Cleanup
+
+```elixir
+{:ok, all} = Bunnyx.StorageZone.list(client)
+all = if is_list(all), do: all, else: all.items
+
+for z <- Enum.filter(all, &String.starts_with?(&1.name, "bunnyx-int-sz-")) do
+  case Bunnyx.StorageZone.delete(client, z.id) do
+    {:ok, _} -> IO.puts("  Deleted: #{z.name}")
+    {:error, e} -> IO.puts("  Failed: #{z.name} (#{e.message})")
+  end
+end
+
+IO.puts("✓ Cleanup done")
+```
+
+## StorageZone.check_availability
+
+```elixir
+{:ok, true} = Bunnyx.StorageZone.check_availability(client, sz_name)
+
+IO.puts("✓ check_availability: #{sz_name} is available")
+```
+
+## StorageZone.create
+
+```elixir
+{:ok, sz} = Bunnyx.StorageZone.create(client, name: sz_name, region: "DE")
+%Bunnyx.StorageZone{} = sz
+^sz_name = sz.name
+true = is_integer(sz.id)
+true = is_binary(sz.password)
+true = sz.region == "DE"
+
+IO.puts("✓ create: #{sz.id} (#{sz.name}, region: #{sz.region})")
+sz
+```
+
+## StorageZone.get
+
+```elixir
+{:ok, fetched} = Bunnyx.StorageZone.get(client, sz.id)
+%Bunnyx.StorageZone{} = fetched
+true = fetched.id == sz.id
+true = fetched.name == sz_name
+
+IO.puts("✓ get: #{fetched.id} — matches")
+```
+
+## StorageZone.list
+
+```elixir
+{:ok, all} = Bunnyx.StorageZone.list(client)
+all = if is_list(all), do: all, else: all.items
+true = Enum.any?(all, &(&1.id == sz.id))
+
+IO.puts("✓ list: found zone in #{length(all)} total")
+```
+
+## StorageZone.update
+
+```elixir
+{:ok, updated} = Bunnyx.StorageZone.update(client, sz.id, rewrite_404_to_200: true)
+%Bunnyx.StorageZone{} = updated
+true = updated.rewrite_404_to_200 == true
+
+IO.puts("✓ update: rewrite_404_to_200 set to true")
+```
+
+## StorageZone.statistics
+
+```elixir
+{:ok, stats} = Bunnyx.StorageZone.statistics(client, sz.id)
+true = is_map(stats.storage_used_chart)
+true = is_map(stats.file_count_chart)
+
+IO.puts("✓ statistics: returned")
+```
+
+## StorageZone.reset_password
+
+```elixir
+{:ok, nil} = Bunnyx.StorageZone.reset_password(client, sz.id)
+
+# Re-fetch to get the new password
+{:ok, sz} = Bunnyx.StorageZone.get(client, sz.id)
+
+IO.puts("✓ reset_password: done (new password length: #{String.length(sz.password)})")
+```
+
+## StorageZone.reset_read_only_password
+
+```elixir
+{:ok, nil} = Bunnyx.StorageZone.reset_read_only_password(client, sz.id)
+
+IO.puts("✓ reset_read_only_password: done")
+```
+
+## Edge Storage: put, get, list, delete
+
+```elixir
+# Wait for credentials to propagate
+IO.puts("  Waiting for credential propagation...")
+Process.sleep(5_000)
+
+storage = Bunnyx.Storage.new(storage_key: sz.password, zone: sz_name)
+content = "Hello from Bunnyx integration test!"
+
+# Put
+{:ok, nil} = Bunnyx.Storage.put(storage, "/test.txt", content)
+IO.puts("✓ Storage.put: uploaded /test.txt")
+
+# Get
+{:ok, downloaded} = Bunnyx.Storage.get(storage, "/test.txt")
+^content = downloaded
+IO.puts("✓ Storage.get: content matches")
+
+# List
+{:ok, objects} = Bunnyx.Storage.list(storage, "/")
+true = is_list(objects)
+file = Enum.find(objects, &(&1.object_name == "test.txt"))
+%Bunnyx.Storage.Object{} = file
+true = file.length > 0
+IO.puts("✓ Storage.list: found #{file.object_name} (#{file.length} bytes)")
+
+# Put with checksum
+checksum = :crypto.hash(:sha256, "checksum test") |> Base.encode16(case: :lower)
+{:ok, nil} = Bunnyx.Storage.put(storage, "/checksum.txt", "checksum test", checksum: checksum)
+IO.puts("✓ Storage.put (checksum): uploaded with SHA-256")
+
+# Delete
+{:ok, nil} = Bunnyx.Storage.delete(storage, "/test.txt")
+IO.puts("✓ Storage.delete: /test.txt deleted")
+
+{:ok, nil} = Bunnyx.Storage.delete(storage, "/checksum.txt")
+IO.puts("✓ Storage.delete: /checksum.txt deleted")
+```
+
+## StorageZone.delete
+
+```elixir
+{:ok, nil} = Bunnyx.StorageZone.delete(client, sz.id)
+{:error, %Bunnyx.Error{}} = Bunnyx.StorageZone.get(client, sz.id)
+
+IO.puts("✓ delete: zone #{sz.id} gone")
+```
+
+## Done
+
+```elixir
+IO.puts("")
+IO.puts("══════════════════════════════════════")
+IO.puts("  Storage: all passed!")
+IO.puts("  StorageZone CRUD ✓  Statistics ✓")
+IO.puts("  Password reset ✓  Availability ✓")
+IO.puts("  Edge Storage put/get/list/delete ✓")
+IO.puts("  Checksum upload ✓")
+IO.puts("══════════════════════════════════════")
+```

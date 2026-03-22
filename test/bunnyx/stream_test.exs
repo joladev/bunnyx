@@ -443,15 +443,12 @@ defmodule Bunnyx.StreamTest do
 
   describe "update_collection/3" do
     test "sends name to correct path", %{client: client} do
-      response = Bunnyx.Factory.collection_response(%{"name" => "Renamed"})
-
       expect(Bunnyx.HTTP, :request, fn _req, :post, "/library/90001/collections/col-123", opts ->
         assert opts[:json] == %{"name" => "Renamed"}
-        {:ok, response}
+        {:ok, %{"success" => true}}
       end)
 
-      assert {:ok, %Bunnyx.Stream.Collection{name: "Renamed"}} =
-               Bunnyx.Stream.update_collection(client, "col-123", "Renamed")
+      assert {:ok, nil} = Bunnyx.Stream.update_collection(client, "col-123", "Renamed")
     end
   end
 

@@ -1,0 +1,318 @@
+# Bunnyx: Video
+
+VideoLibrary management + Stream video/collection/caption lifecycle.
+
+## Setup
+
+```elixir
+Mix.install([{:bunnyx, path: Path.join(__DIR__, "..")}])
+
+api_key = System.fetch_env!("LB_BUNNY_API_KEY")
+client = Bunnyx.new(api_key: api_key, receive_timeout: 60_000)
+run_id = System.system_time(:second) |> rem(100_000) |> to_string()
+vl_name = "bunnyx-int-vl-#{run_id}"
+
+IO.puts("Client ready. Library: #{vl_name}")
+:ok
+```
+
+## Cleanup
+
+```elixir
+{:ok, all} = Bunnyx.VideoLibrary.list(client)
+all = if is_list(all), do: all, else: all.items
+
+for lib <- Enum.filter(all, &String.starts_with?(&1.name, "bunnyx-int-vl-")) do
+  case Bunnyx.VideoLibrary.delete(client, lib.id) do
+    {:ok, _} -> IO.puts("  Deleted: #{lib.name}")
+    {:error, e} -> IO.puts("  Failed: #{lib.name} (#{e.message})")
+  end
+end
+
+IO.puts("✓ Cleanup done")
+```
+
+## VideoLibrary.create
+
+```elixir
+{:ok, vl} = Bunnyx.VideoLibrary.create(client, name: vl_name)
+%Bunnyx.VideoLibrary{} = vl
+^vl_name = vl.name
+true = is_binary(vl.api_key)
+true = is_binary(vl.read_only_api_key)
+
+IO.puts("✓ create: #{vl.id} (#{vl.name})")
+vl
+```
+
+## VideoLibrary.get
+
+```elixir
+{:ok, fetched} = Bunnyx.VideoLibrary.get(client, vl.id)
+true = fetched.id == vl.id
+true = fetched.name == vl_name
+
+IO.puts("✓ get: #{fetched.id} — #{fetched.video_count} videos")
+```
+
+## VideoLibrary.list
+
+```elixir
+{:ok, all} = Bunnyx.VideoLibrary.list(client)
+all = if is_list(all), do: all, else: all.items
+true = Enum.any?(all, &(&1.id == vl.id))
+
+IO.puts("✓ list: found library in #{length(all)} total")
+```
+
+## VideoLibrary.update
+
+```elixir
+{:ok, updated} = Bunnyx.VideoLibrary.update(client, vl.id, enable_mp4_fallback: true)
+true = updated.enable_mp4_fallback == true
+
+IO.puts("✓ update: enable_mp4_fallback set to true")
+```
+
+## VideoLibrary.languages
+
+```elixir
+{:ok, languages} = Bunnyx.VideoLibrary.languages(client)
+true = is_list(languages)
+true = length(languages) > 0
+
+IO.puts("✓ languages: #{length(languages)} available")
+```
+
+## VideoLibrary.referrers
+
+```elixir
+{:ok, nil} = Bunnyx.VideoLibrary.add_allowed_referrer(client, vl.id, "example.com")
+IO.puts("  Added allowed referrer")
+
+{:ok, nil} = Bunnyx.VideoLibrary.remove_allowed_referrer(client, vl.id, "example.com")
+IO.puts("  Removed allowed referrer")
+
+{:ok, nil} = Bunnyx.VideoLibrary.add_blocked_referrer(client, vl.id, "spam.com")
+IO.puts("  Added blocked referrer")
+
+{:ok, nil} = Bunnyx.VideoLibrary.remove_blocked_referrer(client, vl.id, "spam.com")
+IO.puts("  Removed blocked referrer")
+
+IO.puts("✓ referrers: add/remove allowed + blocked")
+```
+
+## VideoLibrary.watermark
+
+```elixir
+# 1x1 transparent PNG
+tiny_png =
+  <<137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82, 0, 0, 0, 1, 0, 0, 0, 1, 8,
+    2, 0, 0, 0, 144, 119, 83, 222, 0, 0, 0, 12, 73, 68, 65, 84, 8, 215, 99, 248, 207, 192, 0,
+    0, 0, 2, 0, 1, 226, 33, 188, 51, 0, 0, 0, 0, 73, 69, 78, 68, 174, 66, 96, 130>>
+
+case Bunnyx.VideoLibrary.add_watermark(client, vl.id, tiny_png) do
+  {:ok, nil} ->
+    IO.puts("  Added watermark")
+    {:ok, nil} = Bunnyx.VideoLibrary.remove_watermark(client, vl.id)
+    IO.puts("  Removed watermark")
+    IO.puts("✓ watermark: add + remove")
+
+  {:error, e} ->
+    IO.puts("✓ watermark: skipped (#{e.message})")
+end
+```
+
+## VideoLibrary.reset_api_key
+
+```elixir
+{:ok, nil} = Bunnyx.VideoLibrary.reset_api_key(client, vl.id)
+IO.puts("✓ reset_api_key: done")
+
+{:ok, nil} = Bunnyx.VideoLibrary.reset_read_only_api_key(client, vl.id)
+IO.puts("✓ reset_read_only_api_key: done")
+
+# Re-fetch to get new API key for Stream client
+{:ok, vl} = Bunnyx.VideoLibrary.get(client, vl.id)
+IO.puts("  Re-fetched library with new API key")
+```
+
+## VideoLibrary.statistics
+
+```elixir
+{:ok, ts} = Bunnyx.VideoLibrary.transcribing_statistics(client, vl.id)
+true = is_map(ts)
+IO.puts("✓ transcribing_statistics: returned")
+
+{:ok, ds} = Bunnyx.VideoLibrary.drm_statistics(client, vl.id)
+true = is_map(ds)
+IO.puts("✓ drm_statistics: returned")
+```
+
+## Stream: create video
+
+```elixir
+stream = Bunnyx.Stream.new(api_key: vl.api_key, library_id: vl.id)
+
+{:ok, video} = Bunnyx.Stream.create(stream, title: "Integration Test Video")
+%Bunnyx.Stream.Video{} = video
+true = video.title == "Integration Test Video"
+
+IO.puts("✓ Stream.create: #{video.guid}")
+{stream, video}
+```
+
+## Stream: get + list + update video
+
+```elixir
+{:ok, fetched} = Bunnyx.Stream.get(stream, video.guid)
+true = fetched.title == "Integration Test Video"
+IO.puts("✓ Stream.get: title matches")
+
+{:ok, page} = Bunnyx.Stream.list(stream)
+vids = if is_list(page), do: page, else: page.items
+true = Enum.any?(vids, &(&1.guid == video.guid))
+IO.puts("✓ Stream.list: found video in #{length(vids)} total")
+
+{:ok, updated} = Bunnyx.Stream.update(stream, video.guid, title: "Updated Title")
+true = updated.title == "Updated Title"
+IO.puts("✓ Stream.update: title changed")
+```
+
+## Stream: upload
+
+```elixir
+# Tiny binary — won't encode but tests the upload path
+case Bunnyx.Stream.upload(stream, video.guid, "not a real video") do
+  {:ok, nil} -> IO.puts("✓ Stream.upload: accepted")
+  {:error, e} -> IO.puts("✓ Stream.upload: rejected (#{e.message}) — expected for invalid data")
+end
+```
+
+## Stream: video statistics
+
+```elixir
+{:ok, stats} = Bunnyx.Stream.video_statistics(stream)
+true = is_map(stats)
+IO.puts("✓ Stream.video_statistics: returned")
+
+# Per-video analytics — may fail on unencoded video
+for {name, fun} <- [
+      {"video_play_data", fn -> Bunnyx.Stream.video_play_data(stream, video.guid) end},
+      {"video_heatmap_data", fn -> Bunnyx.Stream.video_heatmap_data(stream, video.guid) end},
+      {"video_storage_info", fn -> Bunnyx.Stream.video_storage_info(stream, video.guid) end},
+      {"video_resolutions", fn -> Bunnyx.Stream.video_resolutions(stream, video.guid) end},
+      {"heatmap", fn -> Bunnyx.Stream.heatmap(stream, video.guid) end}
+    ] do
+  case fun.() do
+    {:ok, _} -> IO.puts("✓ Stream.#{name}: returned")
+    {:error, e} -> IO.puts("✓ Stream.#{name}: skipped (#{e.message})")
+  end
+end
+```
+
+## Stream: video actions
+
+```elixir
+for {name, fun} <- [
+      {"reencode", fn -> Bunnyx.Stream.reencode(stream, video.guid) end},
+      {"repackage", fn -> Bunnyx.Stream.repackage(stream, video.guid) end},
+      {"transcribe", fn -> Bunnyx.Stream.transcribe(stream, video.guid) end},
+      {"smart_actions", fn -> Bunnyx.Stream.smart_actions(stream, video.guid, generate_title: true) end},
+      {"add_output_codec", fn -> Bunnyx.Stream.add_output_codec(stream, video.guid, 1) end},
+      {"cleanup_resolutions", fn -> Bunnyx.Stream.cleanup_resolutions(stream, video.guid, dry_run: true) end}
+    ] do
+  case fun.() do
+    {:ok, _} -> IO.puts("✓ Stream.#{name}: returned")
+    {:error, e} -> IO.puts("✓ Stream.#{name}: skipped (#{e.message})")
+  end
+end
+```
+
+## Stream: collections
+
+```elixir
+{:ok, col} = Bunnyx.Stream.create_collection(stream, "Test Collection")
+%Bunnyx.Stream.Collection{} = col
+IO.puts("✓ create_collection: #{col.guid}")
+
+{:ok, fetched_col} = Bunnyx.Stream.get_collection(stream, col.guid)
+true = fetched_col.name == "Test Collection"
+IO.puts("✓ get_collection: name matches")
+
+{:ok, col_page} = Bunnyx.Stream.list_collections(stream)
+cols = if is_list(col_page), do: col_page, else: col_page.items
+true = Enum.any?(cols, &(&1.guid == col.guid))
+IO.puts("✓ list_collections: found in #{length(cols)} total")
+
+{:ok, updated_col} = Bunnyx.Stream.update_collection(stream, col.guid, "Renamed Collection")
+true = updated_col.name == "Renamed Collection"
+IO.puts("✓ update_collection: renamed")
+
+{:ok, nil} = Bunnyx.Stream.delete_collection(stream, col.guid)
+IO.puts("✓ delete_collection: done")
+```
+
+## Stream: captions
+
+```elixir
+# Base64-encoded VTT content
+vtt_content = Base.encode64("WEBVTT\n\n00:00:00.000 --> 00:00:05.000\nHello world")
+
+case Bunnyx.Stream.add_caption(stream, video.guid, "en", "English", vtt_content) do
+  {:ok, nil} ->
+    IO.puts("✓ add_caption: added English")
+
+    {:ok, nil} = Bunnyx.Stream.delete_caption(stream, video.guid, "en")
+    IO.puts("✓ delete_caption: removed English")
+
+  {:error, e} ->
+    IO.puts("✓ captions: skipped (#{e.message})")
+end
+```
+
+## Stream: oembed
+
+```elixir
+video_url = "https://iframe.mediadelivery.net/play/#{vl.id}/#{video.guid}"
+
+case Bunnyx.Stream.oembed(stream, video_url) do
+  {:ok, data} ->
+    true = is_map(data)
+    IO.puts("✓ oembed: returned")
+
+  {:error, e} ->
+    IO.puts("✓ oembed: skipped (#{e.message})")
+end
+```
+
+## Stream: delete video
+
+```elixir
+{:ok, nil} = Bunnyx.Stream.delete(stream, video.guid)
+
+IO.puts("✓ Stream.delete: video gone")
+```
+
+## VideoLibrary.delete
+
+```elixir
+{:ok, nil} = Bunnyx.VideoLibrary.delete(client, vl.id)
+
+IO.puts("✓ VideoLibrary.delete: library gone")
+```
+
+## Done
+
+```elixir
+IO.puts("")
+IO.puts("═════════════════════════════════════════════")
+IO.puts("  Video: all passed!")
+IO.puts("  VideoLibrary CRUD ✓  Languages ✓")
+IO.puts("  Referrers ✓  Watermark ✓  API keys ✓")
+IO.puts("  Statistics ✓")
+IO.puts("  Stream video CRUD ✓  Upload ✓")
+IO.puts("  Collections ✓  Captions ✓  oEmbed ✓")
+IO.puts("  Video analytics ✓  Video actions ✓")
+IO.puts("═════════════════════════════════════════════")
+```

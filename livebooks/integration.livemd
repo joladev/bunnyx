@@ -557,5 +557,3 @@ IO.puts("  Error handling ✓  Security ✓")
 IO.puts("  Telemetry ✓")
 IO.puts("═══════════════════════════════════════")
 ```
-
-<!-- livebook:{"offset":13780,"stamp":{"token":"XCP.d6jLhB9U_cxOQOCtvwvXhTyGUhiX31CIyFJMTQvbwc31FelrZk9q9Bimd7e0H2es_ZzrMtN91qO2DSzTSRo2sPOI0fXg_yTrWYaJqRTJhiILFqwfBl1utA","version":2}} -->

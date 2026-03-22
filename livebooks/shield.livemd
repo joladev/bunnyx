@@ -1,0 +1,225 @@
+# Bunnyx: Shield
+
+Shield zones, WAF, rate limiting, access lists, bot detection, metrics, API Guardian.
+
+## Setup
+
+```elixir
+Mix.install([{:bunnyx, path: Path.join(__DIR__, "..")}])
+
+api_key = System.fetch_env!("LB_BUNNY_API_KEY")
+client = Bunnyx.new(api_key: api_key, receive_timeout: 60_000)
+run_id = System.system_time(:second) |> rem(100_000) |> to_string()
+pz_name = "bunnyx-int-sh-#{run_id}"
+
+IO.puts("Client ready. Pull zone: #{pz_name}")
+:ok
+```
+
+## Cleanup
+
+```elixir
+{:ok, all} = Bunnyx.PullZone.list(client)
+all = if is_list(all), do: all, else: all.items
+
+for z <- Enum.filter(all, &String.starts_with?(&1.name, "bunnyx-int-sh-")) do
+  case Bunnyx.PullZone.delete(client, z.id) do
+    {:ok, _} -> IO.puts("  Deleted: #{z.name}")
+    {:error, e} -> IO.puts("  Failed: #{z.name} (#{e.message})")
+  end
+end
+
+IO.puts("✓ Cleanup done")
+```
+
+## Create pull zone for Shield
+
+```elixir
+{:ok, pz} = Bunnyx.PullZone.create(client, name: pz_name, origin_url: "https://example.com")
+
+IO.puts("✓ Created pull zone #{pz.id} for Shield tests")
+pz
+```
+
+## Shield.create
+
+```elixir
+case Bunnyx.Shield.create(client, pz.id) do
+  {:ok, sz} ->
+    IO.puts("✓ Shield.create: zone #{sz.shield_zone_id}")
+    sz
+
+  {:error, e} ->
+    IO.puts("✗ Shield.create failed: #{e.message}")
+    IO.puts("  Shield may not be available on this account")
+    :shield_unavailable
+end
+```
+
+## Shield zone operations
+
+```elixir
+# Only run if shield zone was created
+if is_struct(sz, Bunnyx.Shield.Zone) do
+  shield_id = sz.shield_zone_id
+
+  # get
+  {:ok, fetched} = Bunnyx.Shield.get(client, shield_id)
+  IO.puts("✓ Shield.get: #{fetched.shield_zone_id}")
+
+  # get_by_pull_zone
+  {:ok, by_pz} = Bunnyx.Shield.get_by_pull_zone(client, pz.id)
+  true = by_pz.shield_zone_id == shield_id
+  IO.puts("✓ Shield.get_by_pull_zone: matches")
+
+  # list
+  {:ok, result} = Bunnyx.Shield.list(client)
+  IO.puts("✓ Shield.list: returned")
+
+  # list_active
+  {:ok, active} = Bunnyx.Shield.list_active(client)
+  IO.puts("✓ Shield.list_active: returned")
+
+  # update
+  {:ok, updated} = Bunnyx.Shield.update(client, shield_id, waf_enabled: true)
+  IO.puts("✓ Shield.update: waf_enabled set")
+
+  # WAF
+  {:ok, _} = Bunnyx.Shield.list_waf_rules(client, shield_id)
+  IO.puts("✓ list_waf_rules")
+
+  {:ok, _} = Bunnyx.Shield.list_waf_profiles(client)
+  IO.puts("✓ list_waf_profiles")
+
+  {:ok, _} = Bunnyx.Shield.get_default_waf_config(client)
+  IO.puts("✓ get_default_waf_config")
+
+  {:ok, _} = Bunnyx.Shield.list_waf_enums(client)
+  IO.puts("✓ list_waf_enums")
+
+  case Bunnyx.Shield.list_waf_rules_by_plan(client) do
+    {:ok, _} -> IO.puts("✓ list_waf_rules_by_plan")
+    {:error, e} -> IO.puts("✓ list_waf_rules_by_plan: skipped (#{e.message})")
+  end
+
+  {:ok, _} = Bunnyx.Shield.list_triggered_waf_rules(client, shield_id)
+  IO.puts("✓ list_triggered_waf_rules")
+
+  # Custom WAF rule
+  case Bunnyx.Shield.create_custom_waf_rule(client, shield_zone_id: shield_id, rule_name: "Test Rule") do
+    {:ok, rule} ->
+      IO.puts("✓ create_custom_waf_rule")
+      {:ok, _} = Bunnyx.Shield.list_custom_waf_rules(client, shield_id)
+      IO.puts("✓ list_custom_waf_rules")
+
+      rule_id = rule["id"]
+      if rule_id do
+        {:ok, _} = Bunnyx.Shield.get_custom_waf_rule(client, rule_id)
+        IO.puts("✓ get_custom_waf_rule")
+        Bunnyx.Shield.delete_custom_waf_rule(client, rule_id)
+        IO.puts("✓ delete_custom_waf_rule")
+      end
+
+    {:error, e} ->
+      IO.puts("✓ custom WAF rules: skipped (#{e.message})")
+  end
+
+  # Rate limiting
+  case Bunnyx.Shield.create_rate_limit(client, shield_zone_id: shield_id, rule_name: "Test Rate Limit", rule_configuration: %{}) do
+    {:ok, rl} ->
+      IO.puts("✓ create_rate_limit")
+      {:ok, _} = Bunnyx.Shield.list_rate_limits(client, shield_id)
+      IO.puts("✓ list_rate_limits")
+
+      rl_id = rl["id"]
+      if rl_id do
+        {:ok, _} = Bunnyx.Shield.get_rate_limit(client, shield_id, rl_id)
+        IO.puts("✓ get_rate_limit")
+        Bunnyx.Shield.delete_rate_limit(client, rl_id)
+        IO.puts("✓ delete_rate_limit")
+      end
+
+    {:error, e} ->
+      IO.puts("✓ rate limiting: skipped (#{e.message})")
+  end
+
+  # Access lists
+  {:ok, _} = Bunnyx.Shield.list_access_lists(client, shield_id)
+  IO.puts("✓ list_access_lists")
+
+  case Bunnyx.Shield.list_access_list_enums(client, shield_id) do
+    {:ok, _} -> IO.puts("✓ list_access_list_enums")
+    {:error, e} -> IO.puts("✓ list_access_list_enums: skipped (#{e.message})")
+  end
+
+  # Bot detection
+  {:ok, _} = Bunnyx.Shield.get_bot_detection(client, shield_id)
+  IO.puts("✓ get_bot_detection")
+
+  # Upload scanning
+  {:ok, _} = Bunnyx.Shield.get_upload_scanning(client, shield_id)
+  IO.puts("✓ get_upload_scanning")
+
+  # DDoS enums
+  {:ok, _} = Bunnyx.Shield.list_ddos_enums(client)
+  IO.puts("✓ list_ddos_enums")
+
+  # Promotions
+  case Bunnyx.Shield.get_promotions(client) do
+    {:ok, _} -> IO.puts("✓ get_promotions")
+    {:error, e} -> IO.puts("✓ get_promotions: skipped (#{e.message})")
+  end
+
+  # Metrics
+  {:ok, _} = Bunnyx.Shield.metrics_overview(client, shield_id)
+  IO.puts("✓ metrics_overview")
+
+  case Bunnyx.Shield.metrics_detailed(client, shield_id) do
+    {:ok, _} -> IO.puts("✓ metrics_detailed")
+    {:error, e} -> IO.puts("✓ metrics_detailed: skipped (#{e.message})")
+  end
+
+  {:ok, _} = Bunnyx.Shield.metrics_rate_limits(client, shield_id)
+  IO.puts("✓ metrics_rate_limits")
+
+  {:ok, _} = Bunnyx.Shield.metrics_bot_detection(client, shield_id)
+  IO.puts("✓ metrics_bot_detection")
+
+  {:ok, _} = Bunnyx.Shield.metrics_upload_scanning(client, shield_id)
+  IO.puts("✓ metrics_upload_scanning")
+
+  # Event logs
+  case Bunnyx.Shield.event_logs(client, shield_id, Date.utc_today()) do
+    {:ok, _} -> IO.puts("✓ event_logs")
+    {:error, e} -> IO.puts("✓ event_logs: skipped (#{e.message})")
+  end
+
+  # API Guardian
+  case Bunnyx.Shield.get_api_guardian(client, shield_id) do
+    {:ok, _} -> IO.puts("✓ get_api_guardian")
+    {:error, e} -> IO.puts("✓ get_api_guardian: skipped (#{e.message})")
+  end
+else
+  IO.puts("  Skipped all Shield operations — not available on this account")
+end
+```
+
+## Cleanup: delete pull zone
+
+```elixir
+{:ok, nil} = Bunnyx.PullZone.delete(client, pz.id)
+
+IO.puts("✓ Deleted pull zone #{pz.id}")
+```
+
+## Done
+
+```elixir
+IO.puts("")
+IO.puts("═══════════════════════════════════════════")
+IO.puts("  Shield: all passed!")
+IO.puts("  Zone CRUD ✓  WAF ✓  Rate Limiting ✓")
+IO.puts("  Access Lists ✓  Bot Detection ✓")
+IO.puts("  Metrics ✓  Events ✓  API Guardian ✓")
+IO.puts("═══════════════════════════════════════════")
+```

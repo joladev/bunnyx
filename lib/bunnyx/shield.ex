@@ -35,6 +35,7 @@ defmodule Bunnyx.Shield do
       end
 
     case Bunnyx.HTTP.request(client.req, :post, "/shield/shield-zone", json: json) do
+      {:ok, %{"data" => %{"shieldZone" => zone_data}}} -> {:ok, Zone.from_response(zone_data)}
       {:ok, body} -> {:ok, unwrap_data(body)}
       {:error, _} = error -> error
     end

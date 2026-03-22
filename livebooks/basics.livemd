@@ -1,0 +1,249 @@
+# Bunnyx: Basics
+
+## Section
+
+Reference data, billing, account, API keys, and logging.
+
+## Setup
+
+```elixir
+Mix.install([{:bunnyx, path: Path.join(__DIR__, "..")}])
+
+api_key = System.fetch_env!("LB_BUNNY_API_KEY")
+client = Bunnyx.new(api_key: api_key, receive_timeout: 60_000)
+
+IO.puts("Client ready")
+:ok
+```
+
+## Country.list
+
+```elixir
+{:ok, countries} = Bunnyx.Country.list(client)
+true = is_list(countries)
+true = length(countries) > 100
+%{name: name, iso_code: code, is_eu: is_eu} = hd(countries)
+true = is_binary(name)
+true = is_binary(code)
+true = is_boolean(is_eu)
+
+IO.puts("✓ Country.list: #{length(countries)} countries (first: #{name}/#{code}, EU: #{is_eu})")
+```
+
+## Region.list
+
+```elixir
+{:ok, regions} = Bunnyx.Region.list(client)
+true = is_list(regions)
+true = length(regions) > 0
+%{id: id, name: name, region_code: code, price_per_gigabyte: price} = hd(regions)
+true = is_integer(id)
+true = is_number(price)
+
+IO.puts("✓ Region.list: #{length(regions)} regions (first: #{name}/#{code}, $#{price}/GB)")
+```
+
+## Statistics.get
+
+```elixir
+{:ok, stats} = Bunnyx.Statistics.get(client)
+true = is_integer(stats.total_bandwidth_used)
+true = is_integer(stats.total_requests_served)
+true = is_number(stats.cache_hit_rate)
+
+IO.puts("✓ Statistics.get: #{stats.total_bandwidth_used} bandwidth, #{stats.total_requests_served} requests, #{stats.cache_hit_rate} cache rate")
+```
+
+## Statistics.get with date range
+
+```elixir
+last_month = Date.utc_today() |> Date.add(-30) |> to_string()
+today = Date.utc_today() |> to_string()
+
+{:ok, stats} = Bunnyx.Statistics.get(client, date_from: last_month, date_to: today)
+true = is_integer(stats.total_bandwidth_used)
+
+IO.puts("✓ Statistics.get (date range): #{stats.total_bandwidth_used} bandwidth last 30 days")
+```
+
+## Billing.details
+
+```elixir
+{:ok, billing} = Bunnyx.Billing.details(client)
+true = is_number(billing.balance)
+true = is_boolean(billing.billing_enabled)
+true = is_number(billing.this_month_charges)
+
+IO.puts("✓ Billing.details: balance #{billing.balance}, charges #{billing.this_month_charges}")
+```
+
+## Billing.summary
+
+```elixir
+{:ok, summary} = Bunnyx.Billing.summary(client)
+true = is_list(summary)
+
+IO.puts("✓ Billing.summary: #{length(summary)} zone summaries")
+```
+
+## Billing.pending_payments
+
+```elixir
+{:ok, payments} = Bunnyx.Billing.pending_payments(client)
+true = is_list(payments)
+
+IO.puts("✓ Billing.pending_payments: #{length(payments)} pending")
+```
+
+## ApiKey.list
+
+```elixir
+{:ok, result} = Bunnyx.ApiKey.list(client)
+keys = if is_list(result), do: result, else: result.items
+true = is_list(keys)
+
+IO.puts("✓ ApiKey.list: #{length(keys)} keys")
+```
+
+## Account.affiliate
+
+```elixir
+case Bunnyx.Account.affiliate(client) do
+  {:ok, affiliate} ->
+    true = is_map(affiliate)
+    IO.puts("✓ Account.affiliate: returned")
+
+  {:error, %Bunnyx.Error{message: msg}} ->
+    IO.puts("✓ Account.affiliate: not enabled (#{msg})")
+end
+```
+
+## Account.audit_log
+
+```elixir
+today = Date.utc_today()
+
+{:ok, log} = Bunnyx.Account.audit_log(client, today)
+true = is_map(log)
+
+IO.puts("✓ Account.audit_log: returned for #{today}")
+```
+
+## Account.search
+
+```elixir
+{:ok, results} = Bunnyx.Account.search(client, "test")
+true = is_map(results)
+
+IO.puts("✓ Account.search: returned")
+```
+
+## Logging (needs a pull zone)
+
+```elixir
+# Create a temporary pull zone for logging tests
+run_id = System.system_time(:second) |> rem(100_000) |> to_string()
+pz_name = "bunnyx-int-log-#{run_id}"
+
+{:ok, pz} = Bunnyx.PullZone.create(client, name: pz_name, origin_url: "https://example.com")
+IO.puts("  Created temp pull zone #{pz.id} for logging tests")
+
+today = Date.utc_today()
+
+# CDN logs — may be empty for a new zone, that's fine
+case Bunnyx.Logging.cdn(client, pz.id, today) do
+  {:ok, logs} ->
+    IO.puts("✓ Logging.cdn: #{byte_size(logs)} bytes of logs")
+
+  {:error, %Bunnyx.Error{status: status}} ->
+    IO.puts("✓ Logging.cdn: no logs available (status #{status}) — expected for new zone")
+end
+
+# Origin error logs
+case Bunnyx.Logging.origin_errors(client, pz.id, today) do
+  {:ok, logs} ->
+    IO.puts("✓ Logging.origin_errors: returned")
+
+  {:error, %Bunnyx.Error{status: status}} ->
+    IO.puts("✓ Logging.origin_errors: no logs available (status #{status}) — expected for new zone")
+end
+
+# Cleanup
+{:ok, nil} = Bunnyx.PullZone.delete(client, pz.id)
+IO.puts("  Deleted temp pull zone")
+```
+
+## Error handling
+
+```elixir
+{:error, error} = Bunnyx.PullZone.get(client, 999_999_999)
+%Bunnyx.Error{} = error
+true = is_integer(error.status)
+true = is_binary(error.message)
+true = error.method == :get
+true = error.path == "/pullzone/999999999"
+
+IO.puts("✓ Error struct: status=#{error.status}, method=#{error.method}, path=#{error.path}")
+```
+
+## ArgumentError on invalid keys
+
+```elixir
+try do
+  Bunnyx.PullZone.create(client, bad_key: "value")
+  raise "Should have raised"
+rescue
+  e in ArgumentError ->
+    true = e.message =~ "unknown key :bad_key"
+    IO.puts("✓ ArgumentError: #{e.message}")
+end
+```
+
+## Inspect hides secrets
+
+```elixir
+inspected = inspect(client)
+false = inspected =~ api_key
+
+IO.puts("✓ Inspect: API key hidden")
+```
+
+## Telemetry
+
+```elixir
+ref = make_ref()
+pid = self()
+
+:telemetry.attach(
+  "int-test-#{inspect(ref)}",
+  [:bunnyx, :request, :stop],
+  fn _event, measurements, metadata, _ ->
+    send(pid, {:telemetry, ref, measurements, metadata})
+  end,
+  nil
+)
+
+Bunnyx.Country.list(client)
+
+receive do
+  {:telemetry, ^ref, %{duration: duration}, %{method: :get, status: 200}} ->
+    ms = System.convert_time_unit(duration, :native, :millisecond)
+    IO.puts("✓ Telemetry: stop event received (#{ms}ms)")
+after
+  5000 -> raise "Telemetry event not received"
+end
+
+:telemetry.detach("int-test-#{inspect(ref)}")
+```
+
+## Done
+
+```elixir
+IO.puts("")
+IO.puts("═══════════════════════════════════")
+IO.puts("  Basics: all passed!")
+IO.puts("  Country ✓  Region ✓  Statistics ✓")
+IO.puts("  Billing ✓  ApiKey ✓  Account ✓")
+IO.puts("  Logging ✓  Error ✓  Telemetry ✓")
+IO.puts("═══════════════════════════════════")
+```

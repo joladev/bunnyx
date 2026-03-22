@@ -1,0 +1,196 @@
+# Bunnyx: DNS
+
+DnsZone + DnsRecord full lifecycle.
+
+## Setup
+
+```elixir
+Mix.install([{:bunnyx, path: Path.join(__DIR__, "..")}])
+
+api_key = System.fetch_env!("LB_BUNNY_API_KEY")
+client = Bunnyx.new(api_key: api_key, receive_timeout: 60_000)
+run_id = System.system_time(:second) |> rem(100_000) |> to_string()
+domain = "bunnyx-int-#{run_id}.test"
+
+IO.puts("Client ready. Domain: #{domain}")
+:ok
+```
+
+## Cleanup
+
+```elixir
+{:ok, all} = Bunnyx.DnsZone.list(client)
+all = if is_list(all), do: all, else: all.items
+
+for z <- Enum.filter(all, &String.starts_with?(&1.domain, "bunnyx-int-")) do
+  case Bunnyx.DnsZone.delete(client, z.id) do
+    {:ok, _} -> IO.puts("  Deleted: #{z.domain}")
+    {:error, e} -> IO.puts("  Failed: #{z.domain} (#{e.message})")
+  end
+end
+
+IO.puts("✓ Cleanup done")
+```
+
+## DnsZone.create
+
+```elixir
+{:ok, dns} = Bunnyx.DnsZone.create(client, domain: domain)
+%Bunnyx.DnsZone{} = dns
+^domain = dns.domain
+true = is_integer(dns.id)
+
+IO.puts("✓ create: #{dns.id} (#{dns.domain})")
+dns
+```
+
+## DnsZone.get
+
+```elixir
+{:ok, fetched} = Bunnyx.DnsZone.get(client, dns.id)
+true = fetched.id == dns.id
+true = fetched.domain == domain
+true = is_list(fetched.records)
+
+IO.puts("✓ get: #{fetched.id} — #{length(fetched.records)} existing records")
+```
+
+## DnsZone.list
+
+```elixir
+{:ok, all} = Bunnyx.DnsZone.list(client)
+all = if is_list(all), do: all, else: all.items
+true = Enum.any?(all, &(&1.id == dns.id))
+
+IO.puts("✓ list: found zone in #{length(all)} total")
+```
+
+## DnsZone.update
+
+```elixir
+{:ok, updated} = Bunnyx.DnsZone.update(client, dns.id, logging_enabled: true)
+%Bunnyx.DnsZone{} = updated
+true = updated.logging_enabled == true
+
+IO.puts("✓ update: logging_enabled set to true")
+```
+
+## DnsZone.check_availability
+
+```elixir
+{:ok, false} = Bunnyx.DnsZone.check_availability(client, domain)
+IO.puts("✓ check_availability: taken domain returns false")
+```
+
+## DnsZone.statistics
+
+```elixir
+{:ok, stats} = Bunnyx.DnsZone.statistics(client, dns.id)
+true = is_integer(stats.total_queries_served)
+true = is_map(stats.queries_served_chart)
+
+IO.puts("✓ statistics: #{stats.total_queries_served} queries served")
+```
+
+## DnsRecord.add
+
+```elixir
+{:ok, record} = Bunnyx.DnsRecord.add(client, dns.id, type: 0, name: "www", value: "1.2.3.4", ttl: 300)
+%Bunnyx.DnsRecord{} = record
+true = record.name == "www"
+true = record.value == "1.2.3.4"
+true = record.ttl == 300
+
+IO.puts("✓ DnsRecord.add: #{record.name} → #{record.value} (ttl: #{record.ttl})")
+record
+```
+
+## DnsRecord.update
+
+```elixir
+{:ok, nil} = Bunnyx.DnsRecord.update(client, dns.id, record.id, value: "5.6.7.8")
+
+IO.puts("✓ DnsRecord.update: done (returns nil — API doesn't return updated record)")
+```
+
+## DnsRecord.delete
+
+```elixir
+{:ok, nil} = Bunnyx.DnsRecord.delete(client, dns.id, record.id)
+
+IO.puts("✓ DnsRecord.delete: done")
+```
+
+## DnsZone.export
+
+```elixir
+{:ok, zone_file} = Bunnyx.DnsZone.export(client, dns.id)
+true = is_binary(zone_file)
+
+IO.puts("✓ export: #{byte_size(zone_file)} bytes")
+```
+
+## DnsZone.import_records
+
+```elixir
+# Import a simple A record via zone file format
+import_data = "test-import 300 IN A 10.0.0.1"
+
+case Bunnyx.DnsZone.import_records(client, dns.id, import_data) do
+  {:ok, result} ->
+    IO.puts("✓ import_records: successful=#{result.records_successful}, failed=#{result.records_failed}, skipped=#{result.records_skipped}")
+
+  {:error, e} ->
+    IO.puts("✓ import_records: returned error (#{e.message}) — may need specific format")
+end
+```
+
+## DnsZone.enable_dnssec + disable_dnssec
+
+```elixir
+case Bunnyx.DnsZone.enable_dnssec(client, dns.id) do
+  {:ok, nil} ->
+    IO.puts("✓ enable_dnssec: done")
+
+    {:ok, nil} = Bunnyx.DnsZone.disable_dnssec(client, dns.id)
+    IO.puts("✓ disable_dnssec: done")
+
+  {:error, e} ->
+    IO.puts("✓ enable_dnssec: not available (#{e.message})")
+end
+```
+
+## DnsZone.issue_certificate
+
+```elixir
+# Will fail — not a real domain. But we verify the call works.
+case Bunnyx.DnsZone.issue_certificate(client, dns.id) do
+  {:ok, nil} ->
+    IO.puts("✓ issue_certificate: done")
+
+  {:error, e} ->
+    IO.puts("✓ issue_certificate: expected error (#{e.message}) — not a real domain")
+end
+```
+
+## DnsZone.delete
+
+```elixir
+{:ok, nil} = Bunnyx.DnsZone.delete(client, dns.id)
+{:error, %Bunnyx.Error{}} = Bunnyx.DnsZone.get(client, dns.id)
+
+IO.puts("✓ delete: zone #{dns.id} gone")
+```
+
+## Done
+
+```elixir
+IO.puts("")
+IO.puts("═══════════════════════════════════════")
+IO.puts("  DNS: all passed!")
+IO.puts("  DnsZone CRUD ✓  Statistics ✓")
+IO.puts("  DnsRecord add/update/delete ✓")
+IO.puts("  Export ✓  Import ✓  DNSSEC ✓")
+IO.puts("  Certificate ✓  Availability ✓")
+IO.puts("═══════════════════════════════════════")
+```

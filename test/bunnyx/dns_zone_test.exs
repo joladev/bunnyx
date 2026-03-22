@@ -255,23 +255,21 @@ defmodule Bunnyx.DnsZoneTest do
   end
 
   describe "check_availability/2" do
-    test "returns {:ok, nil} when available", %{client: client} do
+    test "returns {:ok, true} when available", %{client: client} do
       expect(Bunnyx.HTTP, :request, fn _req, :post, "/dnszone/checkavailability", opts ->
         assert opts[:json] == %{"Name" => "example.com"}
-        {:ok, ""}
+        {:ok, %{"Available" => true}}
       end)
 
-      assert {:ok, nil} = Bunnyx.DnsZone.check_availability(client, "example.com")
+      assert {:ok, true} = Bunnyx.DnsZone.check_availability(client, "example.com")
     end
 
-    test "returns error when unavailable", %{client: client} do
-      error = %Bunnyx.Error{status: 400, message: "Name already taken"}
-
+    test "returns {:ok, false} when taken", %{client: client} do
       expect(Bunnyx.HTTP, :request, fn _req, :post, "/dnszone/checkavailability", _opts ->
-        {:error, error}
+        {:ok, %{"Available" => false}}
       end)
 
-      assert {:error, ^error} = Bunnyx.DnsZone.check_availability(client, "taken.com")
+      assert {:ok, false} = Bunnyx.DnsZone.check_availability(client, "taken.com")
     end
   end
 

@@ -235,6 +235,8 @@ defmodule Bunnyx.EdgeScript do
     client = Bunnyx.resolve(client)
 
     case Bunnyx.HTTP.request(client.req, :get, "/compute/script/#{id}/secrets", []) do
+      {:ok, %{"Secrets" => secrets}} -> {:ok, secrets}
+      {:ok, body} when is_list(body) -> {:ok, body}
       {:ok, body} -> {:ok, body}
       {:error, _} = error -> error
     end

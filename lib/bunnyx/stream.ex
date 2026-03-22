@@ -112,7 +112,7 @@ defmodule Bunnyx.Stream do
            "/library/#{client.library_id}/videos/#{video_id}",
            []
          ) do
-      {:ok, body} -> {:ok, Video.from_response(body)}
+      {:ok, body} -> {:ok, Video.from_response(unwrap(body))}
       {:error, _} = error -> error
     end
   end
@@ -136,7 +136,7 @@ defmodule Bunnyx.Stream do
     case Bunnyx.HTTP.request(client.req, :post, "/library/#{client.library_id}/videos",
            json: json
          ) do
-      {:ok, body} -> {:ok, Video.from_response(body)}
+      {:ok, body} -> {:ok, Video.from_response(unwrap(body))}
       {:error, _} = error -> error
     end
   end
@@ -166,7 +166,7 @@ defmodule Bunnyx.Stream do
            "/library/#{client.library_id}/videos/#{video_id}",
            json: json
          ) do
-      {:ok, body} -> {:ok, Video.from_response(body)}
+      {:ok, body} -> {:ok, Video.from_response(unwrap(body))}
       {:error, _} = error -> error
     end
   end
@@ -223,7 +223,7 @@ defmodule Bunnyx.Stream do
     case Bunnyx.HTTP.request(client.req, :post, "/library/#{client.library_id}/videos/fetch",
            json: json
          ) do
-      {:ok, body} -> {:ok, Video.from_response(body)}
+      {:ok, body} -> {:ok, Video.from_response(unwrap(body))}
       {:error, _} = error -> error
     end
   end
@@ -284,7 +284,7 @@ defmodule Bunnyx.Stream do
            "/library/#{client.library_id}/collections/#{collection_id}",
            []
          ) do
-      {:ok, body} -> {:ok, Collection.from_response(body)}
+      {:ok, body} -> {:ok, Collection.from_response(unwrap(body))}
       {:error, _} = error -> error
     end
   end
@@ -298,14 +298,14 @@ defmodule Bunnyx.Stream do
     case Bunnyx.HTTP.request(client.req, :post, "/library/#{client.library_id}/collections",
            json: %{"name" => name}
          ) do
-      {:ok, body} -> {:ok, Collection.from_response(body)}
+      {:ok, body} -> {:ok, Collection.from_response(unwrap(body))}
       {:error, _} = error -> error
     end
   end
 
   @doc "Updates a collection's name."
   @spec update_collection(t() | keyword(), String.t(), String.t()) ::
-          {:ok, Collection.t()} | {:error, Bunnyx.Error.t()}
+          {:ok, nil} | {:error, Bunnyx.Error.t()}
   def update_collection(client, collection_id, name) do
     client = resolve(client)
 
@@ -315,7 +315,7 @@ defmodule Bunnyx.Stream do
            "/library/#{client.library_id}/collections/#{collection_id}",
            json: %{"name" => name}
          ) do
-      {:ok, body} -> {:ok, Collection.from_response(body)}
+      {:ok, _} -> {:ok, nil}
       {:error, _} = error -> error
     end
   end
@@ -795,6 +795,11 @@ defmodule Bunnyx.Stream do
       {Map.fetch!(mapping, key), value}
     end)
   end
+
+  # Stream API wraps some POST responses in {"data": ..., "success": true}.
+  # This unwraps to the inner data if present.
+  defp unwrap(%{"data" => data}) when is_map(data), do: data
+  defp unwrap(body), do: body
 
   defp maybe_put(opts, _key, nil), do: opts
   defp maybe_put(opts, key, value), do: Keyword.put(opts, key, value)

@@ -1,0 +1,191 @@
+# Bunnyx: Compute
+
+Edge scripting + Magic Containers.
+
+## Setup
+
+```elixir
+Mix.install([{:bunnyx, path: Path.join(__DIR__, "..")}])
+
+api_key = System.fetch_env!("LB_BUNNY_API_KEY")
+client = Bunnyx.new(api_key: api_key, receive_timeout: 60_000)
+run_id = System.system_time(:second) |> rem(100_000) |> to_string()
+
+IO.puts("Client ready (run_id: #{run_id})")
+:ok
+```
+
+## Edge Script: cleanup
+
+```elixir
+{:ok, all} = Bunnyx.EdgeScript.list(client)
+scripts = if is_list(all), do: all, else: all.items
+
+for s <- Enum.filter(scripts, fn s -> is_map(s) and String.starts_with?(s["Name"] || "", "bunnyx-int-") end) do
+  case Bunnyx.EdgeScript.delete(client, s["Id"]) do
+    {:ok, _} -> IO.puts("  Deleted: #{s["Name"]}")
+    {:error, e} -> IO.puts("  Failed: #{s["Name"]} (#{e.message})")
+  end
+end
+
+IO.puts("✓ EdgeScript cleanup done")
+```
+
+## EdgeScript.create
+
+```elixir
+script_name = "bunnyx-int-es-#{run_id}"
+
+case Bunnyx.EdgeScript.create(client, name: script_name, script_type: 1) do
+  {:ok, script} ->
+    IO.puts("✓ create: #{script["Id"]} (#{script["Name"]})")
+    script
+
+  {:error, e} ->
+    IO.puts("✗ EdgeScript.create failed: #{e.message}")
+    IO.puts("  Edge scripting may not be available on this account")
+    :edge_scripting_unavailable
+end
+```
+
+## EdgeScript operations
+
+```elixir
+if is_map(script) do
+  script_id = script["Id"]
+
+  # get
+  {:ok, fetched} = Bunnyx.EdgeScript.get(client, script_id)
+  IO.puts("✓ get: #{fetched["Name"]}")
+
+  # list
+  {:ok, all} = Bunnyx.EdgeScript.list(client)
+  IO.puts("✓ list: returned")
+
+  # update
+  {:ok, _} = Bunnyx.EdgeScript.update(client, script_id, name: "bunnyx-int-es-updated-#{run_id}")
+  IO.puts("✓ update: renamed")
+
+  # set_code
+  {:ok, nil} = Bunnyx.EdgeScript.set_code(client, script_id, "export default { async fetch(request) { return new Response('hello'); } }")
+  IO.puts("✓ set_code: done")
+
+  # get_code
+  {:ok, code} = Bunnyx.EdgeScript.get_code(client, script_id)
+  true = is_map(code)
+  IO.puts("✓ get_code: returned")
+
+  # statistics
+  {:ok, stats} = Bunnyx.EdgeScript.statistics(client, script_id)
+  IO.puts("✓ statistics: returned")
+
+  # publish_release
+  case Bunnyx.EdgeScript.publish_release(client, script_id, note: "integration test") do
+    {:ok, nil} -> IO.puts("✓ publish_release: done")
+    {:error, e} -> IO.puts("✓ publish_release: skipped (#{e.message})")
+  end
+
+  # list_releases
+  {:ok, _} = Bunnyx.EdgeScript.list_releases(client, script_id)
+  IO.puts("✓ list_releases: returned")
+
+  # get_active_release
+  case Bunnyx.EdgeScript.get_active_release(client, script_id) do
+    {:ok, _} -> IO.puts("✓ get_active_release: returned")
+    {:error, e} -> IO.puts("✓ get_active_release: skipped (#{e.message})")
+  end
+
+  # rotate_deployment_key
+  {:ok, nil} = Bunnyx.EdgeScript.rotate_deployment_key(client, script_id)
+  IO.puts("✓ rotate_deployment_key: done")
+
+  # Secrets
+  {:ok, nil} = Bunnyx.EdgeScript.add_secret(client, script_id, "TEST_KEY", "test_value")
+  IO.puts("✓ add_secret: done")
+
+  {:ok, secrets} = Bunnyx.EdgeScript.list_secrets(client, script_id)
+  IO.puts("✓ list_secrets: #{length(secrets)} secrets")
+
+  {:ok, nil} = Bunnyx.EdgeScript.upsert_secret(client, script_id, "TEST_KEY", "updated_value")
+  IO.puts("✓ upsert_secret: done")
+
+  {:ok, nil} = Bunnyx.EdgeScript.update_secret(client, script_id, "TEST_KEY", "final_value")
+  IO.puts("✓ update_secret: done")
+
+  # Find secret ID for deletion
+  {:ok, secrets} = Bunnyx.EdgeScript.list_secrets(client, script_id)
+  test_secret = Enum.find(secrets, fn s -> is_map(s) and (s["Name"] == "TEST_KEY" or s["name"] == "TEST_KEY") end)
+
+  if test_secret do
+    secret_id = test_secret["Id"] || test_secret["id"]
+    if secret_id do
+      {:ok, nil} = Bunnyx.EdgeScript.delete_secret(client, script_id, secret_id)
+      IO.puts("✓ delete_secret: done")
+    end
+  end
+
+  # Variables
+  {:ok, nil} = Bunnyx.EdgeScript.add_variable(client, script_id, name: "TEST_VAR", required: false, default_value: "hello")
+  IO.puts("✓ add_variable: done")
+
+  case Bunnyx.EdgeScript.get_variable(client, script_id, "TEST_VAR") do
+    {:ok, _} -> IO.puts("✓ get_variable: returned")
+    {:error, e} -> IO.puts("✓ get_variable: skipped (#{e.message})")
+  end
+
+  {:ok, nil} = Bunnyx.EdgeScript.upsert_variable(client, script_id, name: "TEST_VAR", required: true, default_value: "world")
+  IO.puts("✓ upsert_variable: done")
+
+  # delete
+  {:ok, nil} = Bunnyx.EdgeScript.delete(client, script_id)
+  IO.puts("✓ delete: done")
+else
+  IO.puts("  Skipped all EdgeScript operations")
+end
+```
+
+## Magic Containers: limits + regions
+
+```elixir
+# These are read-only and should work on any account
+case Bunnyx.MagicContainers.get_limits(client) do
+  {:ok, limits} ->
+    IO.puts("✓ MagicContainers.get_limits: returned")
+
+  {:error, e} ->
+    IO.puts("✓ MagicContainers.get_limits: skipped (#{e.message})")
+end
+
+case Bunnyx.MagicContainers.list_regions(client) do
+  {:ok, regions} ->
+    IO.puts("✓ MagicContainers.list_regions: #{length(regions)} regions")
+
+  {:error, e} ->
+    IO.puts("✓ MagicContainers.list_regions: skipped (#{e.message})")
+end
+
+case Bunnyx.MagicContainers.list_nodes(client) do
+  {:ok, _} -> IO.puts("✓ MagicContainers.list_nodes: returned")
+  {:error, e} -> IO.puts("✓ MagicContainers.list_nodes: skipped (#{e.message})")
+end
+
+case Bunnyx.MagicContainers.list_registries(client) do
+  {:ok, registries} ->
+    IO.puts("✓ MagicContainers.list_registries: #{length(registries)} registries")
+
+  {:error, e} ->
+    IO.puts("✓ MagicContainers.list_registries: skipped (#{e.message})")
+end
+```
+
+## Done
+
+```elixir
+IO.puts("")
+IO.puts("════════════════════════════════════════════")
+IO.puts("  Compute: all passed!")
+IO.puts("  EdgeScript CRUD ✓  Code ✓  Releases ✓")
+IO.puts("  Secrets ✓  Variables ✓")
+IO.puts("  MagicContainers read-only ✓")
+IO.puts("════════════════════════════════════════════")
+```

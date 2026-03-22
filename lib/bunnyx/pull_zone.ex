@@ -227,14 +227,14 @@ defmodule Bunnyx.PullZone do
 
   @doc "Checks if a pull zone name is available."
   @spec check_availability(Bunnyx.t() | keyword(), String.t()) ::
-          {:ok, nil} | {:error, Bunnyx.Error.t()}
+          {:ok, boolean()} | {:error, Bunnyx.Error.t()}
   def check_availability(client, name) do
     client = Bunnyx.resolve(client)
 
     case Bunnyx.HTTP.request(client.req, :post, "/pullzone/checkavailability",
            json: %{"Name" => name}
          ) do
-      {:ok, _} -> {:ok, nil}
+      {:ok, body} -> {:ok, body["Available"]}
       {:error, _} = error -> error
     end
   end

@@ -212,23 +212,21 @@ defmodule Bunnyx.PullZoneTest do
   end
 
   describe "check_availability/2" do
-    test "returns {:ok, nil} when available", %{client: client} do
+    test "returns {:ok, true} when available", %{client: client} do
       expect(Bunnyx.HTTP, :request, fn _req, :post, "/pullzone/checkavailability", opts ->
         assert opts[:json] == %{"Name" => "my-zone"}
-        {:ok, ""}
+        {:ok, %{"Available" => true}}
       end)
 
-      assert {:ok, nil} = Bunnyx.PullZone.check_availability(client, "my-zone")
+      assert {:ok, true} = Bunnyx.PullZone.check_availability(client, "my-zone")
     end
 
-    test "returns error when unavailable", %{client: client} do
-      error = %Bunnyx.Error{status: 400, message: "Name already taken"}
-
+    test "returns {:ok, false} when taken", %{client: client} do
       expect(Bunnyx.HTTP, :request, fn _req, :post, "/pullzone/checkavailability", _opts ->
-        {:error, error}
+        {:ok, %{"Available" => false}}
       end)
 
-      assert {:error, ^error} = Bunnyx.PullZone.check_availability(client, "taken-zone")
+      assert {:ok, false} = Bunnyx.PullZone.check_availability(client, "taken-zone")
     end
   end
 
