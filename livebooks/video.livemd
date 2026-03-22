@@ -245,9 +245,11 @@ cols = if is_list(col_page), do: col_page, else: col_page.items
 true = Enum.any?(cols, &(&1.guid == col.guid))
 IO.puts("✓ list_collections: found in #{length(cols)} total")
 
-{:ok, updated_col} = Bunnyx.Stream.update_collection(stream, col.guid, "Renamed Collection")
-true = updated_col.name == "Renamed Collection"
-IO.puts("✓ update_collection: renamed")
+{:ok, nil} = Bunnyx.Stream.update_collection(stream, col.guid, "Renamed Collection")
+# Verify by re-fetching
+{:ok, refetched_col} = Bunnyx.Stream.get_collection(stream, col.guid)
+true = refetched_col.name == "Renamed Collection"
+IO.puts("✓ update_collection: renamed (verified by re-fetch)")
 
 {:ok, nil} = Bunnyx.Stream.delete_collection(stream, col.guid)
 IO.puts("✓ delete_collection: done")
