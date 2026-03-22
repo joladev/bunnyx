@@ -1,0 +1,535 @@
+# Bunnyx Integration Test
+
+## Section
+
+Full API verification against the real bunny.net API. Run all cells top to bottom. Idempotent — safe to run multiple times.
+
+## Setup
+
+```elixir
+Mix.install([{:bunnyx, path: Path.join(__DIR__, "..")}])
+
+api_key = System.fetch_env!("LB_BUNNY_API_KEY")
+client = Bunnyx.new(api_key: api_key)
+
+IO.puts("Client ready")
+:ok
+```
+
+## Cleanup previous run
+
+```elixir
+# Helper to get items from either flat list or paginated response
+items = fn
+  list when is_list(list) -> list
+  %{items: items} -> items
+end
+
+# Clean up storage zones
+{:ok, all_sz} = Bunnyx.StorageZone.list(client)
+
+for z <- Enum.filter(items.(all_sz), &String.starts_with?(&1.name, "bunnyx-int-")) do
+  storage = Bunnyx.Storage.new(storage_key: z.password, zone: z.name)
+  Bunnyx.Storage.delete(storage, "/test.txt")
+  {:ok, nil} = Bunnyx.StorageZone.delete(client, z.id)
+  IO.puts("  Deleted storage zone: #{z.name}")
+end
+
+# Clean up pull zones
+{:ok, all_pz} = Bunnyx.PullZone.list(client, search: "bunnyx-int-")
+
+for z <- items.(all_pz) do
+  Bunnyx.PullZone.delete(client, z.id)
+  IO.puts("  Deleted pull zone: #{z.name}")
+end
+
+# Clean up DNS zones
+{:ok, all_dns} = Bunnyx.DnsZone.list(client, search: "bunnyx-int-")
+
+for z <- items.(all_dns) do
+  Bunnyx.DnsZone.delete(client, z.id)
+  IO.puts("  Deleted DNS zone: #{z.domain}")
+end
+
+# Clean up video libraries
+{:ok, all_vl} = Bunnyx.VideoLibrary.list(client, search: "bunnyx-int-")
+
+for lib <- items.(all_vl) do
+  Bunnyx.VideoLibrary.delete(client, lib.id)
+  IO.puts("  Deleted video library: #{lib.name}")
+end
+
+IO.puts("✓ Cleanup done")
+```
+
+## Part 1: Reference Data
+
+### Countries
+
+```elixir
+{:ok, countries} = Bunnyx.Country.list(client)
+true = is_list(countries)
+true = length(countries) > 100
+%{name: name, iso_code: code} = hd(countries)
+
+IO.puts("✓ Countries: #{length(countries)} entries (first: #{name} / #{code})")
+```
+
+### Regions
+
+```elixir
+{:ok, regions} = Bunnyx.Region.list(client)
+true = length(regions) > 0
+%{name: name, region_code: code} = hd(regions)
+
+IO.puts("✓ Regions: #{length(regions)} entries (first: #{name} / #{code})")
+```
+
+### Statistics
+
+```elixir
+{:ok, stats} = Bunnyx.Statistics.get(client)
+true = is_integer(stats.total_bandwidth_used)
+
+IO.puts("✓ Statistics: bandwidth #{stats.total_bandwidth_used}, cache hit rate #{stats.cache_hit_rate}")
+```
+
+### Billing
+
+```elixir
+{:ok, billing} = Bunnyx.Billing.details(client)
+true = is_number(billing.balance)
+
+IO.puts("✓ Billing: balance #{billing.balance}")
+```
+
+### API Keys
+
+```elixir
+{:ok, keys} = Bunnyx.ApiKey.list(client)
+# Handle flat list or paginated
+key_list = if is_list(keys), do: keys, else: keys.items
+true = is_list(key_list)
+
+IO.puts("✓ API Keys: #{length(key_list)} keys")
+```
+
+### Purge
+
+<!-- livebook:{"break_markdown":true} -->
+
+### Search
+
+```elixir
+{:ok, results} = Bunnyx.Account.search(client, "test")
+true = is_map(results)
+
+IO.puts("✓ Search: returned results")
+```
+
+## Part 2: Storage Zone Lifecycle
+
+### Create storage zone
+
+```elixir
+sz_name = "bunnyx-int-sz"
+{:ok, sz} = Bunnyx.StorageZone.create(client, name: sz_name, region: "DE")
+%Bunnyx.StorageZone{} = sz
+^sz_name = sz.name
+
+IO.puts("✓ Created storage zone #{sz.id} (#{sz.name})")
+sz
+```
+
+```elixir
+ IO.puts("Password present: #{sz.password != nil}")
+  IO.puts("Password length: #{if sz.password, do: String.length(sz.password), else: "nil"}")
+```
+
+### Get + List storage zone
+
+```elixir
+{:ok, fetched} = Bunnyx.StorageZone.get(client, sz.id)
+true = fetched.id == sz.id
+
+{:ok, all} = Bunnyx.StorageZone.list(client)
+all_list = if is_list(all), do: all, else: all.items
+true = Enum.any?(all_list, &(&1.id == sz.id))
+
+IO.puts("✓ Get and List verified")
+```
+
+### Storage zone statistics
+
+```elixir
+{:ok, stats} = Bunnyx.StorageZone.statistics(client, sz.id)
+true = is_map(stats.storage_used_chart)
+
+IO.puts("✓ Storage zone statistics returned")
+```
+
+### Upload, download, list, delete file
+
+```elixir
+# Storage credentials take a moment to propagate after zone creation
+IO.puts("  Waiting for zone propagation...")
+Process.sleep(5_000)
+
+storage = Bunnyx.Storage.new(storage_key: sz.password, zone: sz_name)
+content = "Hello from Bunnyx!"
+
+{:ok, nil} = Bunnyx.Storage.put(storage, "/test.txt", content)
+IO.puts("  Uploaded /test.txt")
+
+{:ok, downloaded} = Bunnyx.Storage.get(storage, "/test.txt")
+^content = downloaded
+IO.puts("  Downloaded — content matches")
+
+{:ok, objects} = Bunnyx.Storage.list(storage, "/")
+true = Enum.any?(objects, &(&1.object_name == "test.txt"))
+IO.puts("  Listed — file found")
+
+{:ok, nil} = Bunnyx.Storage.delete(storage, "/test.txt")
+IO.puts("  Deleted /test.txt")
+
+IO.puts("✓ Edge storage file lifecycle complete")
+```
+
+### Delete storage zone
+
+```elixir
+{:ok, nil} = Bunnyx.StorageZone.delete(client, sz.id)
+{:error, %Bunnyx.Error{}} = Bunnyx.StorageZone.get(client, sz.id)
+
+IO.puts("✓ Deleted storage zone #{sz.id} — confirmed gone")
+```
+
+## Part 3: Pull Zone Lifecycle
+
+### Create pull zone
+
+```elixir
+pz_name = "bunnyx-int-pz"
+
+{:ok, pz} = Bunnyx.PullZone.create(client, name: pz_name, origin_url: "https://example.com")
+%Bunnyx.PullZone{} = pz
+^pz_name = pz.name
+
+IO.puts("✓ Created pull zone #{pz.id} (#{pz.name})")
+pz
+```
+
+### Get + List + Update pull zone
+
+```elixir
+{:ok, fetched} = Bunnyx.PullZone.get(client, pz.id)
+true = fetched.origin_url == "https://example.com"
+
+{:ok, all_pz} = Bunnyx.PullZone.list(client, search: pz_name)
+pz_list = if is_list(all_pz), do: all_pz, else: all_pz.items
+true = length(pz_list) >= 1
+
+{:ok, updated} = Bunnyx.PullZone.update(client, pz.id, cache_control_max_age_override: 3600)
+true = updated.cache_control_max_age_override == 3600
+
+IO.puts("✓ Get, List, Update verified")
+```
+
+### Pull zone add/remove blocked IP
+
+```elixir
+{:ok, nil} = Bunnyx.PullZone.add_blocked_ip(client, pz.id, "192.0.2.1")
+IO.puts("  Added blocked IP")
+
+{:ok, nil} = Bunnyx.PullZone.remove_blocked_ip(client, pz.id, "192.0.2.1")
+IO.puts("  Removed blocked IP")
+
+IO.puts("✓ Blocked IP add/remove verified")
+```
+
+### Pull zone edge rules
+
+```elixir
+{:ok, nil} =
+  Bunnyx.PullZone.add_or_update_edge_rule(client, pz.id,
+    action_type: 15,
+    trigger_matching_type: 0,
+    description: "Integration test rule",
+    enabled: true,
+    triggers: [
+      %{"Type" => 0, "PatternMatchingType" => 0, "PatternMatches" => ["/test-path"]}
+    ]
+  )
+
+IO.puts("✓ Edge rule created")
+```
+
+### Purge pull zone cache
+
+```elixir
+{:ok, nil} = Bunnyx.Purge.pull_zone(client, pz.id)
+
+IO.puts("✓ Pull zone cache purged")
+```
+
+### Delete pull zone
+
+```elixir
+{:ok, nil} = Bunnyx.PullZone.delete(client, pz.id)
+{:error, %Bunnyx.Error{}} = Bunnyx.PullZone.get(client, pz.id)
+
+IO.puts("✓ Deleted pull zone #{pz.id} — confirmed gone")
+```
+
+## Part 4: DNS Zone Lifecycle
+
+### Create DNS zone
+
+```elixir
+dns_domain = "bunnyx-int-dns.test"
+
+{:ok, dns} = Bunnyx.DnsZone.create(client, domain: dns_domain)
+%Bunnyx.DnsZone{} = dns
+^dns_domain = dns.domain
+
+IO.puts("✓ Created DNS zone #{dns.id} (#{dns.domain})")
+dns
+```
+
+### Get + List DNS zone
+
+```elixir
+{:ok, fetched} = Bunnyx.DnsZone.get(client, dns.id)
+true = fetched.domain == dns_domain
+
+{:ok, all_dns} = Bunnyx.DnsZone.list(client, search: "bunnyx-int-dns")
+dns_list = if is_list(all_dns), do: all_dns, else: all_dns.items
+true = length(dns_list) >= 1
+
+IO.puts("✓ Get and List verified (#{length(fetched.records)} existing records)")
+```
+
+### Add, update, delete DNS record
+
+```elixir
+{:ok, record} =
+  Bunnyx.DnsRecord.add(client, dns.id, type: 0, name: "www", value: "1.2.3.4", ttl: 300)
+
+%Bunnyx.DnsRecord{} = record
+true = record.name == "www"
+IO.puts("  Added A record: #{record.name} → #{record.value}")
+
+{:ok, updated} = Bunnyx.DnsRecord.update(client, dns.id, record.id, value: "5.6.7.8")
+true = updated.value == "5.6.7.8"
+IO.puts("  Updated to: #{updated.value}")
+
+{:ok, nil} = Bunnyx.DnsRecord.delete(client, dns.id, record.id)
+IO.puts("  Deleted record")
+
+IO.puts("✓ DNS record lifecycle complete")
+```
+
+### Export DNS zone
+
+```elixir
+{:ok, zone_file} = Bunnyx.DnsZone.export(client, dns.id)
+true = is_binary(zone_file)
+
+IO.puts("✓ Exported zone file (#{byte_size(zone_file)} bytes)")
+```
+
+### DNS statistics
+
+```elixir
+{:ok, stats} = Bunnyx.DnsZone.statistics(client, dns.id)
+true = is_integer(stats.total_queries_served)
+
+IO.puts("✓ DNS statistics: #{stats.total_queries_served} queries served")
+```
+
+### Delete DNS zone
+
+```elixir
+{:ok, nil} = Bunnyx.DnsZone.delete(client, dns.id)
+{:error, %Bunnyx.Error{}} = Bunnyx.DnsZone.get(client, dns.id)
+
+IO.puts("✓ Deleted DNS zone #{dns.id} — confirmed gone")
+```
+
+## Part 5: Video Library + Stream Lifecycle
+
+### Create video library
+
+```elixir
+vl_name = "bunnyx-int-vl"
+
+{:ok, vl} = Bunnyx.VideoLibrary.create(client, name: vl_name)
+%Bunnyx.VideoLibrary{} = vl
+^vl_name = vl.name
+true = is_binary(vl.api_key)
+
+IO.puts("✓ Created video library #{vl.id} (#{vl.name})")
+vl
+```
+
+### Get + List + Update video library
+
+```elixir
+{:ok, fetched} = Bunnyx.VideoLibrary.get(client, vl.id)
+true = fetched.name == vl_name
+
+{:ok, all_vl} = Bunnyx.VideoLibrary.list(client, search: vl_name)
+vl_list = if is_list(all_vl), do: all_vl, else: all_vl.items
+true = length(vl_list) >= 1
+
+{:ok, updated} = Bunnyx.VideoLibrary.update(client, vl.id, enable_mp4_fallback: true)
+true = updated.enable_mp4_fallback == true
+
+IO.puts("✓ Get, List, Update verified")
+```
+
+### Languages
+
+```elixir
+{:ok, languages} = Bunnyx.VideoLibrary.languages(client)
+true = is_list(languages)
+true = length(languages) > 0
+
+IO.puts("✓ Languages: #{length(languages)} available")
+```
+
+### Stream — create and list video
+
+```elixir
+stream = Bunnyx.Stream.new(api_key: vl.api_key, library_id: vl.id)
+
+{:ok, video} = Bunnyx.Stream.create(stream, title: "Integration Test Video")
+%Bunnyx.Stream.Video{} = video
+true = video.title == "Integration Test Video"
+IO.puts("  Created video: #{video.guid}")
+
+{:ok, video_page} = Bunnyx.Stream.list(stream)
+vids = if is_list(video_page), do: video_page, else: video_page.items
+true = length(vids) >= 1
+IO.puts("  Listed #{length(vids)} video(s)")
+
+{:ok, fetched_video} = Bunnyx.Stream.get(stream, video.guid)
+true = fetched_video.title == "Integration Test Video"
+IO.puts("  Fetched video — title matches")
+
+IO.puts("✓ Stream video CRUD verified")
+
+{stream, video}
+```
+
+### Stream — collections
+
+```elixir
+{:ok, col} = Bunnyx.Stream.create_collection(stream, "Test Collection")
+%Bunnyx.Stream.Collection{} = col
+IO.puts("  Created collection: #{col.guid}")
+
+{:ok, col_result} = Bunnyx.Stream.list_collections(stream)
+cols = if is_list(col_result), do: col_result, else: col_result.items
+true = length(cols) >= 1
+IO.puts("  Listed #{length(cols)} collection(s)")
+
+{:ok, nil} = Bunnyx.Stream.delete_collection(stream, col.guid)
+IO.puts("  Deleted collection")
+
+IO.puts("✓ Stream collections verified")
+```
+
+### Stream — delete video
+
+```elixir
+{:ok, nil} = Bunnyx.Stream.delete(stream, video.guid)
+
+IO.puts("✓ Deleted video #{video.guid}")
+```
+
+### Delete video library
+
+```elixir
+{:ok, nil} = Bunnyx.VideoLibrary.delete(client, vl.id)
+
+IO.puts("✓ Deleted video library #{vl.id}")
+```
+
+## Part 6: Error Handling + Security
+
+### Error handling
+
+```elixir
+{:error, error} = Bunnyx.PullZone.get(client, 999_999_999)
+%Bunnyx.Error{} = error
+true = is_integer(error.status)
+true = is_binary(error.message)
+
+IO.puts("✓ Error: status #{error.status}, message: #{error.message}")
+```
+
+### Invalid key raises ArgumentError
+
+```elixir
+try do
+  Bunnyx.PullZone.create(client, bad_key: "value")
+  raise "Should have raised"
+rescue
+  e in ArgumentError ->
+    true = e.message =~ "unknown key :bad_key"
+    IO.puts("✓ ArgumentError: #{e.message}")
+end
+```
+
+### Inspect hides secrets
+
+```elixir
+inspected = inspect(client)
+false = inspected =~ api_key
+
+IO.puts("✓ Client inspect hides API key")
+```
+
+### Telemetry fires
+
+```elixir
+ref = make_ref()
+pid = self()
+
+:telemetry.attach(
+  "int-test-#{inspect(ref)}",
+  [:bunnyx, :request, :stop],
+  fn _event, measurements, metadata, _ ->
+    send(pid, {:telemetry, ref, measurements, metadata})
+  end,
+  nil
+)
+
+Bunnyx.Country.list(client)
+
+receive do
+  {:telemetry, ^ref, %{duration: duration}, %{method: :get, status: 200}} ->
+    ms = System.convert_time_unit(duration, :native, :millisecond)
+    IO.puts("✓ Telemetry event received (#{ms}ms)")
+after
+  5000 -> raise "Telemetry event not received"
+end
+
+:telemetry.detach("int-test-#{inspect(ref)}")
+```
+
+## Done
+
+```elixir
+IO.puts("")
+IO.puts("═══════════════════════════════════════")
+IO.puts("  All steps passed!")
+IO.puts("  Storage Zone ✓  Pull Zone ✓  DNS ✓")
+IO.puts("  Video Library ✓  Stream ✓")
+IO.puts("  Error handling ✓  Security ✓")
+IO.puts("  Telemetry ✓")
+IO.puts("═══════════════════════════════════════")
+```
+
+<!-- livebook:{"offset":12779,"stamp":{"token":"XCP.JnipG0R8wVwOmy9aAD9LQb9UWSSPYTnR3fbzlOl6_99Cfo-ZTPFpM_rybJl4VFh8a3WM8nonY265xvIJRvstLgb-J9CGHtsYb6zsFUqqlq0xEwcbz_s4fg","version":2}} -->

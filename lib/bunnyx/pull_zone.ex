@@ -95,7 +95,10 @@ defmodule Bunnyx.PullZone do
       |> to_query_params()
 
     case Bunnyx.HTTP.request(client.req, :get, "/pullzone", params: params) do
-      {:ok, body} ->
+      {:ok, body} when is_list(body) ->
+        {:ok, Enum.map(body, &from_response/1)}
+
+      {:ok, body} when is_map(body) ->
         {:ok,
          %{
            items: Enum.map(body["Items"], &from_response/1),
@@ -189,7 +192,7 @@ defmodule Bunnyx.PullZone do
     client = Bunnyx.resolve(client)
 
     case Bunnyx.HTTP.request(client.req, :post, "/pullzone/#{id}/addBlockedIp",
-           json: %{"Value" => ip}
+           json: %{"BlockedIp" => ip}
          ) do
       {:ok, _} -> {:ok, nil}
       {:error, _} = error -> error
@@ -203,7 +206,7 @@ defmodule Bunnyx.PullZone do
     client = Bunnyx.resolve(client)
 
     case Bunnyx.HTTP.request(client.req, :post, "/pullzone/#{id}/removeBlockedIp",
-           json: %{"Value" => ip}
+           json: %{"BlockedIp" => ip}
          ) do
       {:ok, _} -> {:ok, nil}
       {:error, _} = error -> error

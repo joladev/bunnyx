@@ -46,7 +46,10 @@ defmodule Bunnyx.EdgeScript do
     params = to_query_params(opts)
 
     case Bunnyx.HTTP.request(client.req, :get, "/compute/script", params: params) do
-      {:ok, body} ->
+      {:ok, body} when is_list(body) ->
+        {:ok, body}
+
+      {:ok, body} when is_map(body) ->
         {:ok,
          %{
            items: body["Items"],

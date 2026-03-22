@@ -108,7 +108,10 @@ defmodule Bunnyx.DnsZone do
       |> to_query_params()
 
     case Bunnyx.HTTP.request(client.req, :get, "/dnszone", params: params) do
-      {:ok, body} ->
+      {:ok, body} when is_list(body) ->
+        {:ok, Enum.map(body, &from_response/1)}
+
+      {:ok, body} when is_map(body) ->
         {:ok,
          %{
            items: Enum.map(body["Items"], &from_response/1),

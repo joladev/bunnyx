@@ -152,7 +152,7 @@ defmodule Bunnyx.PullZoneTest do
   describe "add_blocked_ip/3" do
     test "sends IP and returns {:ok, nil}", %{client: client} do
       expect(Bunnyx.HTTP, :request, fn _req, :post, "/pullzone/12345/addBlockedIp", opts ->
-        assert opts[:json] == %{"Value" => "1.2.3.4"}
+        assert opts[:json] == %{"BlockedIp" => "1.2.3.4"}
         {:ok, ""}
       end)
 
@@ -173,7 +173,7 @@ defmodule Bunnyx.PullZoneTest do
   describe "remove_blocked_ip/3" do
     test "sends IP and returns {:ok, nil}", %{client: client} do
       expect(Bunnyx.HTTP, :request, fn _req, :post, "/pullzone/12345/removeBlockedIp", opts ->
-        assert opts[:json] == %{"Value" => "1.2.3.4"}
+        assert opts[:json] == %{"BlockedIp" => "1.2.3.4"}
         {:ok, ""}
       end)
 

@@ -94,12 +94,13 @@ defmodule Bunnyx.StorageZone do
   """
   @spec list(Bunnyx.t() | keyword(), keyword()) ::
           {:ok,
-           %{
-             items: [t()],
-             current_page: integer(),
-             total_items: integer(),
-             has_more_items: boolean()
-           }}
+           [t()]
+           | %{
+               items: [t()],
+               current_page: integer(),
+               total_items: integer(),
+               has_more_items: boolean()
+             }}
           | {:error, Bunnyx.Error.t()}
   def list(client, opts \\ []) do
     client = Bunnyx.resolve(client)
@@ -110,7 +111,10 @@ defmodule Bunnyx.StorageZone do
       |> to_query_params()
 
     case Bunnyx.HTTP.request(client.req, :get, "/storagezone", params: params) do
-      {:ok, body} ->
+      {:ok, body} when is_list(body) ->
+        {:ok, Enum.map(body, &from_response/1)}
+
+      {:ok, body} when is_map(body) ->
         {:ok,
          %{
            items: Enum.map(body["Items"], &from_response/1),
