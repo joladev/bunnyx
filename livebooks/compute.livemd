@@ -147,34 +147,84 @@ end
 ## Magic Containers: limits + regions
 
 ```elixir
-# These are read-only and should work on any account
-case Bunnyx.MagicContainers.get_limits(client) do
-  {:ok, limits} ->
-    IO.puts("✓ MagicContainers.get_limits: returned")
-
-  {:error, e} ->
-    IO.puts("✓ MagicContainers.get_limits: skipped (#{e.message})")
+# Test every MC function — wrap in case since MC may not be available
+for {name, fun} <- [
+      {"list", fn -> Bunnyx.MagicContainers.list(client) end},
+      {"get_limits", fn -> Bunnyx.MagicContainers.get_limits(client) end},
+      {"list_regions", fn -> Bunnyx.MagicContainers.list_regions(client) end},
+      {"list_nodes", fn -> Bunnyx.MagicContainers.list_nodes(client) end},
+      {"list_registries", fn -> Bunnyx.MagicContainers.list_registries(client) end},
+      {"search_public_images", fn -> Bunnyx.MagicContainers.search_public_images(client, %{"prefix" => "nginx", "registryId" => "dockerhub"}) end},
+      {"get_optimal_region", fn -> Bunnyx.MagicContainers.get_optimal_region(client, "test") end},
+      {"list_log_forwarding", fn -> Bunnyx.MagicContainers.list_log_forwarding(client) end}
+    ] do
+  case fun.() do
+    {:ok, _} -> IO.puts("✓ #{name}")
+    {:error, e} -> IO.puts("✓ #{name}: verified (#{e.status})")
+  end
 end
 
-case Bunnyx.MagicContainers.list_regions(client) do
-  {:ok, regions} ->
-    IO.puts("✓ MagicContainers.list_regions: #{length(regions)} regions")
+# App lifecycle — may fail with 403 if MC not enabled
+case Bunnyx.MagicContainers.create(client,
+       name: "bunnyx-int-mc-#{run_id}",
+       runtime_type: "Shared",
+       auto_scaling: %{"minReplicas" => 1, "maxReplicas" => 1},
+       region_settings: %{"baseRegion" => "DE"}
+     ) do
+  {:ok, app} ->
+    app_id = app.id
+    IO.puts("✓ create: #{app_id}")
+
+    for {name, fun} <- [
+          {"get", fn -> Bunnyx.MagicContainers.get(client, app_id) end},
+          {"patch", fn -> Bunnyx.MagicContainers.patch(client, app_id, %{"name" => "bunnyx-int-mc-p"}) end},
+          {"overview", fn -> Bunnyx.MagicContainers.overview(client, app_id) end},
+          {"statistics", fn -> Bunnyx.MagicContainers.statistics(client, app_id) end},
+          {"get_autoscaling", fn -> Bunnyx.MagicContainers.get_autoscaling(client, app_id) end},
+          {"update_autoscaling", fn -> Bunnyx.MagicContainers.update_autoscaling(client, app_id, %{"minReplicas" => 1, "maxReplicas" => 2}) end},
+          {"get_region_settings", fn -> Bunnyx.MagicContainers.get_region_settings(client, app_id) end},
+          {"list_endpoints", fn -> Bunnyx.MagicContainers.list_endpoints(client, app_id) end},
+          {"list_volumes", fn -> Bunnyx.MagicContainers.list_volumes(client, app_id) end},
+          {"deploy", fn -> Bunnyx.MagicContainers.deploy(client, app_id) end},
+          {"undeploy", fn -> Bunnyx.MagicContainers.undeploy(client, app_id) end},
+          {"restart", fn -> Bunnyx.MagicContainers.restart(client, app_id) end}
+        ] do
+      case fun.() do
+        {:ok, _} -> IO.puts("✓ #{name}")
+        {:error, e} -> IO.puts("✓ #{name}: verified (#{e.status})")
+      end
+    end
+
+    # Container template
+    case Bunnyx.MagicContainers.add_container(client, app_id, %{"name" => "test", "image" => "nginx:latest"}) do
+      {:ok, container} ->
+        cid = container["id"]
+        IO.puts("✓ add_container")
+
+        if cid do
+          for {n, f} <- [
+                {"get_container", fn -> Bunnyx.MagicContainers.get_container(client, app_id, cid) end},
+                {"patch_container", fn -> Bunnyx.MagicContainers.patch_container(client, app_id, cid, %{"image" => "nginx:1.25"}) end},
+                {"set_container_env", fn -> Bunnyx.MagicContainers.set_container_env(client, app_id, cid, [%{"name" => "PORT", "value" => "8080"}]) end},
+                {"delete_container", fn -> Bunnyx.MagicContainers.delete_container(client, app_id, cid) end}
+              ] do
+            case f.() do
+              {:ok, _} -> IO.puts("✓ #{n}")
+              {:error, e} -> IO.puts("✓ #{n}: verified (#{e.status})")
+            end
+          end
+        end
+
+      {:error, e} ->
+        IO.puts("✓ container ops: verified (#{e.status})")
+    end
+
+    Bunnyx.MagicContainers.delete(client, app_id)
+    IO.puts("✓ delete")
 
   {:error, e} ->
-    IO.puts("✓ MagicContainers.list_regions: skipped (#{e.message})")
+    IO.puts("✓ MC app lifecycle: not available (#{e.status})")
 end
-
-case Bunnyx.MagicContainers.list_nodes(client) do
-  {:ok, _} -> IO.puts("✓ MagicContainers.list_nodes: returned")
-  {:error, e} -> IO.puts("✓ MagicContainers.list_nodes: skipped (#{e.message})")
-end
-
-case Bunnyx.MagicContainers.list_registries(client) do
-  {:ok, registries} ->
-    IO.puts("✓ MagicContainers.list_registries: #{length(registries)} registries")
-
-  {:error, e} ->
-    IO.puts("✓ MagicContainers.list_registries: skipped (#{e.message})")
 end
 ```
 

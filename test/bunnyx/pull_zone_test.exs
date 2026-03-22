@@ -436,7 +436,7 @@ defmodule Bunnyx.PullZoneTest do
                                        :post,
                                        "/pullzone/12345/edgerules/abc-123/setEdgeRuleEnabled",
                                        opts ->
-        assert opts[:json] == %{"Id" => "abc-123", "Value" => true}
+        assert opts[:json] == %{"Id" => 12_345, "Value" => true}
         {:ok, ""}
       end)
 

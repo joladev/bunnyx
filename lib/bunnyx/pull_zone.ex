@@ -433,7 +433,7 @@ defmodule Bunnyx.PullZone do
            client.req,
            :post,
            "/pullzone/#{id}/edgerules/#{edge_rule_id}/setEdgeRuleEnabled",
-           json: %{"Id" => edge_rule_id, "Value" => enabled}
+           json: %{"Id" => id, "Value" => enabled}
          ) do
       {:ok, _} -> {:ok, nil}
       {:error, _} = error -> error

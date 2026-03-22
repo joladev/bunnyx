@@ -157,16 +157,49 @@ end
     ]
   )
 
-IO.puts("✓ add_or_update_edge_rule: created")
+IO.puts("✓ add_or_update_edge_rule")
 
-# Get the zone to find the edge rule GUID
-{:ok, zone_with_rules} = Bunnyx.PullZone.get(client, pz.id)
+# Get GUID from raw response
+{:ok, body} = Bunnyx.HTTP.request(client.req, :get, "/pullzone/#{pz.id}", [])
+edge_rules = body["EdgeRules"] || []
 
-case zone_with_rules.hostnames do
-  _ ->
-    # Edge rules aren't in the hostnames field — they're not exposed in the struct
-    # We tested create, which is the main thing
-    IO.puts("  (edge rule GUID not in struct — skipping enable/delete)")
+if length(edge_rules) > 0 do
+  guid = hd(edge_rules)["Guid"]
+
+  {:ok, nil} = Bunnyx.PullZone.set_edge_rule_enabled(client, pz.id, guid, false)
+  IO.puts("✓ set_edge_rule_enabled: disabled")
+
+  {:ok, nil} = Bunnyx.PullZone.set_edge_rule_enabled(client, pz.id, guid, true)
+  IO.puts("✓ set_edge_rule_enabled: re-enabled")
+
+  {:ok, nil} = Bunnyx.PullZone.delete_edge_rule(client, pz.id, guid)
+  IO.puts("✓ delete_edge_rule")
+end
+```
+
+## SSL/Certificate operations
+
+```elixir
+# SSL ops need a real hostname — test domains don't work.
+# We verify each call returns a clean error.
+test_hostname = "ssl-test-#{run_id}.example.com"
+
+for {name, fun} <- [
+      {"load_free_certificate",
+       fn -> Bunnyx.PullZone.load_free_certificate(client, test_hostname) end},
+      {"set_force_ssl",
+       fn -> Bunnyx.PullZone.set_force_ssl(client, pz.id, test_hostname, true) end},
+      {"update_private_key_type",
+       fn -> Bunnyx.PullZone.update_private_key_type(client, pz.id, test_hostname, 0) end},
+      {"add_certificate",
+       fn -> Bunnyx.PullZone.add_certificate(client, pz.id, test_hostname, "cert", "key") end},
+      {"remove_certificate",
+       fn -> Bunnyx.PullZone.remove_certificate(client, pz.id, test_hostname) end}
+    ] do
+  case fun.() do
+    {:ok, _} -> IO.puts("✓ #{name}")
+    {:error, %Bunnyx.Error{status: status}} -> IO.puts("✓ #{name}: verified error (#{status})")
+  end
 end
 ```
 

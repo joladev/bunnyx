@@ -202,7 +202,8 @@ for {name, fun} <- [
       {"video_heatmap_data", fn -> Bunnyx.Stream.video_heatmap_data(stream, video.guid) end},
       {"video_storage_info", fn -> Bunnyx.Stream.video_storage_info(stream, video.guid) end},
       {"video_resolutions", fn -> Bunnyx.Stream.video_resolutions(stream, video.guid) end},
-      {"heatmap", fn -> Bunnyx.Stream.heatmap(stream, video.guid) end}
+      {"heatmap", fn -> Bunnyx.Stream.heatmap(stream, video.guid) end},
+      {"set_thumbnail", fn -> Bunnyx.Stream.set_thumbnail(stream, video.guid, "https://example.com/thumb.jpg") end}
     ] do
   case fun.() do
     {:ok, _} -> IO.puts("✓ Stream.#{name}: returned")
