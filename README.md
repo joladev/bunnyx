@@ -4,10 +4,10 @@
 [![Hex.pm](https://img.shields.io/hexpm/v/bunnyx.svg)](https://hex.pm/packages/bunnyx)
 [![Docs](https://img.shields.io/badge/docs-hexdocs-blue.svg)](https://hexdocs.pm/bunnyx)
 
-Elixir client for the [bunny.net](https://bunny.net) CDN API. Built on [Req](https://github.com/wojtekmach/req).
+Elixir client for the [bunny.net](https://bunny.net) API. Built on [Req](https://github.com/wojtekmach/req).
 
-bunny.net is a content delivery platform — CDN, edge storage, DNS, and cache management.
-Bunnyx wraps their REST API so you can manage these resources from Elixir.
+Covers the full bunny.net platform — CDN, edge storage, S3-compatible storage, DNS,
+video streaming, Shield/WAF, edge scripting, magic containers, billing, and more.
 
 ## Installation
 
@@ -21,107 +21,110 @@ end
 
 ## Quick start
 
-Bunnyx has two clients because bunny.net uses two separate services with different
-auth and endpoints:
-
-- `Bunnyx.new/1` — for the main API (pull zones, DNS, purging). Uses your account API key.
-- `Bunnyx.Storage.new/1` — for edge storage. Uses a per-zone storage password.
+Most of the API uses a single client authenticated with your account API key.
+Edge storage and video streaming use separate clients with their own credentials —
+see [Clients](#clients) below.
 
 ```elixir
-# Main API client — pull zones, DNS, cache purging
 client = Bunnyx.new(api_key: "sk-...")
 
-# Storage client — file uploads and downloads
-storage = Bunnyx.Storage.new(storage_key: "pw-...", zone: "my-zone")
-```
-
-All functions return `{:ok, result}` or `{:error, %Bunnyx.Error{}}`. Responses come
-back as typed structs, not raw maps.
-
-## Usage
-
-### Pull zones
-
-Pull zones are bunny.net's CDN distribution points. Each zone pulls content from your
-origin server and caches it across their edge network.
-
-```elixir
-{:ok, page} = Bunnyx.PullZone.list(client)
+# CDN
 {:ok, zone} = Bunnyx.PullZone.create(client, name: "my-zone", origin_url: "https://example.com")
 {:ok, zone} = Bunnyx.PullZone.get(client, zone.id)
-{:ok, zone} = Bunnyx.PullZone.update(client, zone.id, cache_control_max_age_override: 3600)
-{:ok, nil}  = Bunnyx.PullZone.delete(client, zone.id)
+
+# DNS
+{:ok, dns} = Bunnyx.DnsZone.create(client, domain: "example.com")
+{:ok, record} = Bunnyx.DnsRecord.add(client, dns.id, type: 0, name: "www", value: "1.2.3.4", ttl: 300)
+
+# Storage zone management
+{:ok, sz} = Bunnyx.StorageZone.create(client, name: "my-storage", region: "DE")
+
+# Purge
+{:ok, nil} = Bunnyx.Purge.pull_zone(client, zone.id)
 ```
 
-### Edge storage
+## Clients
 
-Edge storage lets you store and serve files directly from bunny.net's network, without
-needing your own origin server.
+bunny.net uses different authentication for different services. Bunnyx provides four
+client types:
+
+| Client | Auth | Use for |
+|--------|------|---------|
+| `Bunnyx.new/1` | Account API key | CDN, DNS, storage zones, video libraries, Shield, billing, and everything else |
+| `Bunnyx.Storage.new/1` | Storage zone password | File upload, download, delete, list |
+| `Bunnyx.S3.new/1` | Zone name + password (SigV4) | S3-compatible storage with multipart uploads |
+| `Bunnyx.Stream.new/1` | Library API key | Video CRUD, upload, collections, captions |
 
 ```elixir
-{:ok, objects} = Bunnyx.Storage.list(storage, "/images/")
-{:ok, binary}  = Bunnyx.Storage.get(storage, "/images/logo.png")
-{:ok, nil}     = Bunnyx.Storage.put(storage, "/images/new.png", data)
-{:ok, nil}     = Bunnyx.Storage.delete(storage, "/images/old.png")
+# Edge storage — upload and download files
+storage = Bunnyx.Storage.new(storage_key: "pw-...", zone: "my-zone")
+{:ok, nil} = Bunnyx.Storage.put(storage, "/images/logo.png", image_data)
+{:ok, data} = Bunnyx.Storage.get(storage, "/images/logo.png")
+
+# S3-compatible storage
+s3 = Bunnyx.S3.new(zone: "my-zone", storage_key: "pw-...", region: "de")
+{:ok, nil} = Bunnyx.S3.put(s3, "file.txt", "hello")
+{:ok, result} = Bunnyx.S3.list(s3, prefix: "images/")
+
+# Video streaming
+stream = Bunnyx.Stream.new(api_key: "lib-key-...", library_id: 12345)
+{:ok, video} = Bunnyx.Stream.create(stream, title: "My Video")
+{:ok, nil} = Bunnyx.Stream.upload(stream, video.guid, video_binary)
 ```
 
-### Cache purging
+## API coverage
 
-When you update content at your origin, you need to purge the CDN cache so edge servers
-fetch the new version.
+### Main API (`Bunnyx.new/1`)
 
-```elixir
-{:ok, nil} = Bunnyx.Purge.url(client, "https://cdn.example.com/image.png")
-{:ok, nil} = Bunnyx.Purge.pull_zone(client, 12345)
-```
+- **CDN**: `PullZone` (CRUD, hostnames, SSL, edge rules, referrers, IP blocking, statistics)
+- **DNS**: `DnsZone` (CRUD, DNSSEC, export/import, statistics), `DnsRecord` (add, update, delete)
+- **Storage management**: `StorageZone` (CRUD, statistics, password reset)
+- **Video libraries**: `VideoLibrary` (CRUD, API keys, watermarks, referrers, DRM stats)
+- **Cache**: `Purge` (URL and pull zone purging)
+- **Security**: `Shield` (zones, WAF rules, rate limiting, access lists, bot detection, metrics, API Guardian)
+- **Compute**: `EdgeScript` (scripts, code, releases, secrets, variables), `MagicContainers` (apps, registries, containers, endpoints, volumes)
+- **Account**: `Billing` (details, summary, invoices), `Account` (affiliate, audit log, search), `ApiKey`, `Logging` (CDN + origin logs)
+- **Reference**: `Statistics` (global), `Country`, `Region`
 
-### DNS
+### Separate clients
 
-bunny.net can also host your DNS. Zones hold your domain's records.
-
-```elixir
-{:ok, zone} = Bunnyx.DnsZone.create(client, domain: "example.com")
-{:ok, zone} = Bunnyx.DnsZone.get(client, zone.id)
-
-{:ok, record} = Bunnyx.DnsRecord.add(client, zone.id,
-  type: 0,
-  name: "www",
-  value: "1.2.3.4",
-  ttl: 300
-)
-
-{:ok, record} = Bunnyx.DnsRecord.update(client, zone.id, record.id, ttl: 600)
-{:ok, nil}    = Bunnyx.DnsRecord.delete(client, zone.id, record.id)
-```
-
-### One-off calls
-
-Every function also accepts a keyword list instead of a client struct. This creates
-a throwaway client for a single request — convenient for scripts, less so for
-production code where you'd reuse a client.
-
-```elixir
-{:ok, zones} = Bunnyx.PullZone.list(api_key: "sk-...")
-```
+- **Edge storage** (`Bunnyx.Storage`): upload, download, delete, list files
+- **S3** (`Bunnyx.S3`): PUT, GET, DELETE, HEAD, COPY, ListObjectsV2, multipart uploads
+- **Stream** (`Bunnyx.Stream`): video CRUD, upload, fetch, collections, captions, thumbnails, re-encode, transcription, smart actions, analytics, oEmbed
 
 ## Error handling
 
-All functions return `{:ok, result}` or `{:error, %Bunnyx.Error{}}`. The error struct
-has a `status` field (HTTP status code, or `nil` for network errors) and a `message`.
+All functions return `{:ok, result}` or `{:error, %Bunnyx.Error{}}`. Errors include
+the HTTP method and path for debugging:
 
 ```elixir
 case Bunnyx.PullZone.get(client, 999) do
   {:ok, zone} -> zone
   {:error, %Bunnyx.Error{status: 404}} -> nil
-  {:error, error} -> raise "API error: #{error.message}"
+  {:error, error} -> raise "#{error.method} #{error.path}: #{error.message}"
 end
 ```
 
+## Telemetry
+
+Bunnyx emits telemetry events for every HTTP request:
+
+- `[:bunnyx, :request, :start]` — before the request
+- `[:bunnyx, :request, :stop]` — after a response (success or error status)
+- `[:bunnyx, :request, :exception]` — on transport errors (timeouts, connection failures)
+
 ## Design
 
-- **No global state.** No `Application.get_env`, no compile-time config. Credentials are passed explicitly. This means you can use multiple bunny.net accounts in the same app and tests don't share state.
-- **Built on Req.** No custom HTTP layer. Req handles retries, compression, JSON, and connection pooling through Finch.
-- **Typed structs.** API responses are parsed into structs with snake_case fields, not left as raw PascalCase maps.
+- **No global state.** Credentials are passed explicitly. Multiple accounts work in the same app.
+- **Built on Req.** Retries, compression, JSON, connection pooling via Finch.
+- **Typed structs.** API responses are parsed into structs with snake_case fields.
+- **Secure by default.** Client structs hide credentials in `inspect`. Error messages sanitize API keys.
+- **Configurable.** Per-request timeouts, custom Req options via `:req_opts`.
+
+## Integration testing
+
+An integration Livebook at `livebooks/integration.livemd` tests the SDK against the
+real bunny.net API. Set `LB_BUNNY_API_KEY` and run all cells.
 
 ## License
 
