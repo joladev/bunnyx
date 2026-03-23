@@ -20,7 +20,7 @@ video streaming, Shield/WAF, edge scripting, magic containers, billing, and more
 ```elixir
 def deps do
   [
-    {:bunnyx, "~> 0.1.0"}
+    {:bunnyx, "~> 0.2.0"}
   ]
 end
 ```
