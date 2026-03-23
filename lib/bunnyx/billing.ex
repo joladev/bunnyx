@@ -58,7 +58,11 @@ defmodule Bunnyx.Billing do
         {:ok, Enum.map(body, &from_summary_item/1)}
 
       {:ok, body} when is_map(body) ->
-        items = body |> Map.values() |> List.flatten()
+        items =
+          body
+          |> Map.values()
+          |> List.flatten()
+
         {:ok, Enum.map(items, &from_summary_item/1)}
 
       {:error, _} = error ->

@@ -309,7 +309,12 @@ defmodule Bunnyx.EdgeScript do
   def get_variable(client, id, variable_id) do
     client = Bunnyx.resolve(client)
 
-    case Bunnyx.HTTP.request(client.req, :get, "/compute/script/#{id}/variables/#{variable_id}", []) do
+    case Bunnyx.HTTP.request(
+           client.req,
+           :get,
+           "/compute/script/#{id}/variables/#{variable_id}",
+           []
+         ) do
       {:ok, body} -> {:ok, body}
       {:error, _} = error -> error
     end
