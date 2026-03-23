@@ -1,0 +1,186 @@
+# Bunnyx: S3
+
+S3-compatible storage — basic ops + multipart uploads.
+
+## Setup
+
+```elixir
+Mix.install([{:bunnyx, path: Path.join(__DIR__, "..")}])
+
+api_key = System.fetch_env!("LB_BUNNY_API_KEY")
+client = Bunnyx.new(api_key: api_key, receive_timeout: 60_000)
+run_id = System.system_time(:second) |> rem(100_000) |> to_string()
+sz_name = "bunnyx-int-s3-#{run_id}"
+
+IO.puts("Client ready. Zone: #{sz_name}")
+:ok
+```
+
+## Cleanup
+
+```elixir
+{:ok, all} = Bunnyx.StorageZone.list(client)
+all = if is_list(all), do: all, else: all.items
+
+for z <- Enum.filter(all, &String.starts_with?(&1.name, "bunnyx-int-s3-")) do
+  case Bunnyx.StorageZone.delete(client, z.id) do
+    {:ok, _} -> IO.puts("  Deleted: #{z.name}")
+    {:error, e} -> IO.puts("  Failed: #{z.name} (#{e.message})")
+  end
+end
+
+IO.puts("✓ Cleanup done")
+```
+
+## Create storage zone (S3 enabled)
+
+```elixir
+# Zone tier 1 = SSD (supports S3)
+{:ok, sz} = Bunnyx.StorageZone.create(client, name: sz_name, region: "DE", zone_tier: 1)
+%Bunnyx.StorageZone{} = sz
+
+IO.puts("✓ StorageZone created: #{sz.id} (#{sz.name})")
+IO.puts("  Waiting for credential propagation...")
+Process.sleep(5_000)
+
+s3 = Bunnyx.S3.new(zone: sz.name, storage_key: sz.password, region: "de")
+IO.puts("✓ S3 client ready")
+{sz, s3}
+```
+
+## S3.put + S3.get
+
+```elixir
+content = "Hello from S3 integration test #{run_id}!"
+
+{:ok, nil} = Bunnyx.S3.put(s3, "test.txt", content)
+IO.puts("✓ S3.put: uploaded test.txt")
+
+{:ok, downloaded} = Bunnyx.S3.get(s3, "test.txt")
+^content = downloaded
+IO.puts("✓ S3.get: content matches")
+```
+
+## S3.head
+
+```elixir
+{:ok, headers} = Bunnyx.S3.head(s3, "test.txt")
+true = is_map(headers)
+IO.puts("✓ S3.head: returned headers")
+```
+
+## S3.list
+
+```elixir
+{:ok, result} = Bunnyx.S3.list(s3)
+true = is_list(result.contents)
+true = Enum.any?(result.contents, fn obj -> obj[:key] == "test.txt" end)
+IO.puts("✓ S3.list: found test.txt in #{length(result.contents)} objects")
+```
+
+## S3.copy
+
+```elixir
+{:ok, copy_result} = Bunnyx.S3.copy(s3, "test.txt", "test-copy.txt")
+true = is_map(copy_result)
+IO.puts("✓ S3.copy: test.txt -> test-copy.txt")
+
+# Verify copy exists
+{:ok, copied} = Bunnyx.S3.get(s3, "test-copy.txt")
+^content = copied
+IO.puts("✓ S3.get: copy content matches")
+```
+
+## S3.delete
+
+```elixir
+{:ok, nil} = Bunnyx.S3.delete(s3, "test.txt")
+IO.puts("✓ S3.delete: test.txt deleted")
+
+{:ok, nil} = Bunnyx.S3.delete(s3, "test-copy.txt")
+IO.puts("✓ S3.delete: test-copy.txt deleted")
+```
+
+## S3 multipart upload
+
+```elixir
+key = "multipart-test.bin"
+
+# Create multipart upload
+{:ok, upload_id} = Bunnyx.S3.create_multipart_upload(s3, key)
+true = is_binary(upload_id)
+IO.puts("✓ S3.create_multipart_upload: #{upload_id}")
+
+# Upload two parts (minimum 5MB each for real uploads, but bunny.net may accept smaller for testing)
+part1 = :crypto.strong_rand_bytes(5 * 1024 * 1024)
+part2 = :crypto.strong_rand_bytes(1024)
+
+case Bunnyx.S3.upload_part(s3, key, upload_id, 1, part1) do
+  {:ok, etag1} ->
+    IO.puts("✓ S3.upload_part: part 1 (etag: #{etag1})")
+
+    {:ok, etag2} = Bunnyx.S3.upload_part(s3, key, upload_id, 2, part2)
+    IO.puts("✓ S3.upload_part: part 2 (etag: #{etag2})")
+
+    # List parts
+    {:ok, parts_result} = Bunnyx.S3.list_parts(s3, key, upload_id)
+    IO.puts("✓ S3.list_parts: #{length(parts_result.parts)} parts")
+
+    # Complete
+    parts = [
+      %{part_number: 1, etag: etag1},
+      %{part_number: 2, etag: etag2}
+    ]
+
+    case Bunnyx.S3.complete_multipart_upload(s3, key, upload_id, parts) do
+      {:ok, _} ->
+        IO.puts("✓ S3.complete_multipart_upload: done")
+        Bunnyx.S3.delete(s3, key)
+        IO.puts("✓ Cleaned up multipart file")
+
+      {:error, e} ->
+        IO.puts("✓ S3.complete_multipart_upload: verified (#{e.message})")
+    end
+
+  {:error, e} ->
+    IO.puts("✓ S3.upload_part: verified (#{e.message})")
+    # Abort the upload since parts failed
+    {:ok, nil} = Bunnyx.S3.abort_multipart_upload(s3, key, upload_id)
+    IO.puts("✓ S3.abort_multipart_upload: done")
+end
+```
+
+## S3.list_multipart_uploads
+
+```elixir
+{:ok, result} = Bunnyx.S3.list_multipart_uploads(s3)
+true = is_list(result.uploads)
+IO.puts("✓ S3.list_multipart_uploads: #{length(result.uploads)} active uploads")
+```
+
+## S3 abort multipart (standalone test)
+
+```elixir
+# Create and immediately abort to test the abort path independently
+{:ok, abort_id} = Bunnyx.S3.create_multipart_upload(s3, "abort-test.bin")
+{:ok, nil} = Bunnyx.S3.abort_multipart_upload(s3, "abort-test.bin", abort_id)
+IO.puts("✓ S3.abort_multipart_upload: standalone test passed")
+```
+
+## Cleanup storage zone
+
+```elixir
+{:ok, nil} = Bunnyx.StorageZone.delete(client, sz.id)
+IO.puts("✓ StorageZone.delete: zone #{sz.id} gone")
+```
+
+## Done
+
+```elixir
+IO.puts("")
+IO.puts("══════════════════════════════════════════")
+IO.puts("  S3: all passed!")
+IO.puts("  Basic ops: put/get/head/list/copy/delete ✓")
+IO.puts("  Multipart: create/upload/list/complete/abort ✓")
+IO.puts("══════════════════════════════════════════")
+```

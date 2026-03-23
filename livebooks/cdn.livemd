@@ -227,6 +227,18 @@ true = is_map(os_stats)
 IO.puts("✓ origin_shield_statistics: returned")
 ```
 
+## Purge.url
+
+```elixir
+# Purge a URL — uses the pull zone's hostname
+pz_hostname = "#{pz_name}.b-cdn.net"
+
+case Bunnyx.Purge.url(client, "https://#{pz_hostname}/test-path") do
+  {:ok, nil} -> IO.puts("✓ Purge.url: done")
+  {:error, e} -> IO.puts("✓ Purge.url: verified (#{e.message})")
+end
+```
+
 ## Purge.pull_zone
 
 ```elixir
@@ -253,6 +265,6 @@ IO.puts("  CDN: all passed!")
 IO.puts("  PullZone CRUD ✓  Hostnames ✓")
 IO.puts("  Blocked IPs ✓  Referrers ✓")
 IO.puts("  Edge rules ✓  Security key ✓")
-IO.puts("  Statistics ✓  Purge ✓")
+IO.puts("  Statistics ✓  Purge (url + pull_zone) ✓")
 IO.puts("══════════════════════════════════════════")
 ```

@@ -333,22 +333,24 @@ defmodule Bunnyx.EdgeScriptTest do
     test "returns variable", %{client: client} do
       response = %{"Name" => "PORT", "DefaultValue" => "8080"}
 
-      expect(Bunnyx.HTTP, :request, fn _req, :get, "/compute/script/1/variables/PORT", _opts ->
+      expect(Bunnyx.HTTP, :request, fn _req, :get, "/compute/script/1/variables/42", _opts ->
         {:ok, response}
       end)
 
-      assert {:ok, %{"Name" => "PORT"}} = Bunnyx.EdgeScript.get_variable(client, 1, "PORT")
+      assert {:ok, %{"Name" => "PORT"}} = Bunnyx.EdgeScript.get_variable(client, 1, 42)
     end
   end
 
   describe "add_variable/3" do
     test "sends variable attrs", %{client: client} do
+      response = %{"Id" => 42, "Name" => "PORT", "Required" => true, "DefaultValue" => "8080"}
+
       expect(Bunnyx.HTTP, :request, fn _req, :post, "/compute/script/1/variables/add", opts ->
         assert opts[:json] == %{"Name" => "PORT", "Required" => true, "DefaultValue" => "8080"}
-        {:ok, ""}
+        {:ok, response}
       end)
 
-      assert {:ok, nil} =
+      assert {:ok, %{"Id" => 42}} =
                Bunnyx.EdgeScript.add_variable(client, 1,
                  name: "PORT",
                  required: true,

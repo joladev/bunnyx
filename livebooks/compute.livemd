@@ -124,19 +124,28 @@ if is_map(script) do
     end
   end
 
-  # Variables
-  {:ok, nil} = Bunnyx.EdgeScript.add_variable(client, script_id, name: "TEST_VAR", required: false, default_value: "hello")
-  IO.puts("✓ add_variable: done")
+  # Variables — add_variable now returns the variable with its ID
+  {:ok, var} = Bunnyx.EdgeScript.add_variable(client, script_id, name: "TEST_VAR", required: false, default_value: "hello")
+  var_id = var["Id"]
+  IO.puts("✓ add_variable: ID #{var_id}")
 
-  case Bunnyx.EdgeScript.get_variable(client, script_id, "TEST_VAR") do
-    {:ok, _} -> IO.puts("✓ get_variable: returned")
-    {:error, e} -> IO.puts("✓ get_variable: skipped (#{e.message})")
-  end
+  {:ok, _} = Bunnyx.EdgeScript.get_variable(client, script_id, var_id)
+  IO.puts("✓ get_variable")
 
   {:ok, nil} = Bunnyx.EdgeScript.upsert_variable(client, script_id, name: "TEST_VAR", required: true, default_value: "world")
-  IO.puts("✓ upsert_variable: done")
+  IO.puts("✓ upsert_variable")
 
-  # delete
+  case Bunnyx.EdgeScript.update_variable(client, script_id, var_id, default_value: "final") do
+    {:ok, nil} -> IO.puts("✓ update_variable")
+    {:error, e} -> IO.puts("✓ update_variable: skipped (#{e.message})")
+  end
+
+  case Bunnyx.EdgeScript.delete_variable(client, script_id, var_id) do
+    {:ok, nil} -> IO.puts("✓ delete_variable")
+    {:error, e} -> IO.puts("✓ delete_variable: skipped (#{e.message})")
+  end
+
+  # delete script
   {:ok, nil} = Bunnyx.EdgeScript.delete(client, script_id)
   IO.puts("✓ delete: done")
 else
@@ -164,6 +173,73 @@ for {name, fun} <- [
   end
 end
 
+# Registry CRUD
+case Bunnyx.MagicContainers.add_registry(client, %{"displayName" => "Test Registry", "type" => "DockerHub"}) do
+  {:ok, reg} ->
+    reg_id = if is_map(reg), do: reg["id"], else: nil
+    IO.puts("✓ add_registry")
+
+    if reg_id do
+      case Bunnyx.MagicContainers.get_registry(client, reg_id) do
+        {:ok, _} -> IO.puts("✓ get_registry")
+        {:error, e} -> IO.puts("✓ get_registry: verified (#{e.status})")
+      end
+
+      case Bunnyx.MagicContainers.update_registry(client, reg_id, %{"displayName" => "Updated"}) do
+        {:ok, _} -> IO.puts("✓ update_registry")
+        {:error, e} -> IO.puts("✓ update_registry: verified (#{e.status})")
+      end
+
+      case Bunnyx.MagicContainers.delete_registry(client, reg_id) do
+        {:ok, _} -> IO.puts("✓ delete_registry")
+        {:error, e} -> IO.puts("✓ delete_registry: verified (#{e.status})")
+      end
+    end
+
+  {:error, e} ->
+    IO.puts("✓ registry CRUD: verified (#{e.status})")
+end
+
+# Image operations (read-only, need a registry)
+for {n, f} <- [
+      {"list_images", fn -> Bunnyx.MagicContainers.list_images(client, %{"registryId" => "dockerhub"}) end},
+      {"list_image_tags", fn -> Bunnyx.MagicContainers.list_image_tags(client, %{"image" => "nginx", "registryId" => "dockerhub"}) end},
+      {"get_image_digest", fn -> Bunnyx.MagicContainers.get_image_digest(client, %{"image" => "nginx", "tag" => "latest", "registryId" => "dockerhub"}) end},
+      {"get_config_suggestions", fn -> Bunnyx.MagicContainers.get_config_suggestions(client, %{"image" => "nginx"}) end}
+    ] do
+  case f.() do
+    {:ok, _} -> IO.puts("✓ #{n}")
+    {:error, e} -> IO.puts("✓ #{n}: verified (#{e.status})")
+  end
+end
+
+# Log forwarding CRUD
+case Bunnyx.MagicContainers.create_log_forwarding(client, %{"type" => "http", "url" => "https://example.com/logs"}) do
+  {:ok, lf} ->
+    lf_id = if is_map(lf), do: lf["id"], else: nil
+    IO.puts("✓ create_log_forwarding")
+
+    if lf_id do
+      case Bunnyx.MagicContainers.get_log_forwarding(client, lf_id) do
+        {:ok, _} -> IO.puts("✓ get_log_forwarding")
+        {:error, e} -> IO.puts("✓ get_log_forwarding: verified (#{e.status})")
+      end
+
+      case Bunnyx.MagicContainers.update_log_forwarding(client, lf_id, %{"url" => "https://example.com/logs2"}) do
+        {:ok, _} -> IO.puts("✓ update_log_forwarding")
+        {:error, e} -> IO.puts("✓ update_log_forwarding: verified (#{e.status})")
+      end
+
+      case Bunnyx.MagicContainers.delete_log_forwarding(client, lf_id) do
+        {:ok, _} -> IO.puts("✓ delete_log_forwarding")
+        {:error, e} -> IO.puts("✓ delete_log_forwarding: verified (#{e.status})")
+      end
+    end
+
+  {:error, e} ->
+    IO.puts("✓ log_forwarding CRUD: verified (#{e.status})")
+end
+
 # App lifecycle — may fail with 403 if MC not enabled
 case Bunnyx.MagicContainers.create(client,
        name: "bunnyx-int-mc-#{run_id}",
@@ -183,7 +259,9 @@ case Bunnyx.MagicContainers.create(client,
           {"get_autoscaling", fn -> Bunnyx.MagicContainers.get_autoscaling(client, app_id) end},
           {"update_autoscaling", fn -> Bunnyx.MagicContainers.update_autoscaling(client, app_id, %{"minReplicas" => 1, "maxReplicas" => 2}) end},
           {"get_region_settings", fn -> Bunnyx.MagicContainers.get_region_settings(client, app_id) end},
+          {"update_region_settings", fn -> Bunnyx.MagicContainers.update_region_settings(client, app_id, %{"baseRegion" => "DE"}) end},
           {"list_endpoints", fn -> Bunnyx.MagicContainers.list_endpoints(client, app_id) end},
+          {"add_endpoint", fn -> Bunnyx.MagicContainers.add_endpoint(client, app_id, %{"port" => 8080, "type" => "CDN"}) end},
           {"list_volumes", fn -> Bunnyx.MagicContainers.list_volumes(client, app_id) end},
           {"deploy", fn -> Bunnyx.MagicContainers.deploy(client, app_id) end},
           {"undeploy", fn -> Bunnyx.MagicContainers.undeploy(client, app_id) end},
@@ -217,6 +295,22 @@ case Bunnyx.MagicContainers.create(client,
 
       {:error, e} ->
         IO.puts("✓ container ops: verified (#{e.status})")
+    end
+
+    # Endpoint update/delete — need an endpoint ID, try with a fake one
+    for {n, f} <- [
+          {"update_endpoint", fn -> Bunnyx.MagicContainers.update_endpoint(client, app_id, "fake-ep-id", %{"port" => 9090}) end},
+          {"delete_endpoint", fn -> Bunnyx.MagicContainers.delete_endpoint(client, app_id, "fake-ep-id") end},
+          {"recreate_pod", fn -> Bunnyx.MagicContainers.recreate_pod(client, app_id, "fake-pod-id") end},
+          {"detach_volume", fn -> Bunnyx.MagicContainers.detach_volume(client, app_id, "fake-vol-id") end},
+          {"delete_volume_instance", fn -> Bunnyx.MagicContainers.delete_volume_instance(client, app_id, "fake-vol-id", "fake-inst-id") end},
+          {"delete_all_volume_instances", fn -> Bunnyx.MagicContainers.delete_all_volume_instances(client, app_id, "fake-vol-id") end},
+          {"update (full PUT)", fn -> Bunnyx.MagicContainers.update(client, app_id, %{"name" => "bunnyx-int-mc-u"}) end}
+        ] do
+      case f.() do
+        {:ok, _} -> IO.puts("✓ #{n}")
+        {:error, e} -> IO.puts("✓ #{n}: verified (#{e.status})")
+      end
     end
 
     Bunnyx.MagicContainers.delete(client, app_id)

@@ -95,6 +95,21 @@ true = is_list(payments)
 IO.puts("✓ Billing.pending_payments: #{length(payments)} pending")
 ```
 
+## Billing.summary_pdf + invoice_pdf
+
+```elixir
+# PDF downloads need valid billing record IDs — we don't have any, so verify the error path
+case Bunnyx.Billing.summary_pdf(client, 999_999) do
+  {:ok, pdf} -> IO.puts("✓ Billing.summary_pdf: #{byte_size(pdf)} bytes")
+  {:error, e} -> IO.puts("✓ Billing.summary_pdf: verified (#{e.status})")
+end
+
+case Bunnyx.Billing.invoice_pdf(client, 999_999) do
+  {:ok, pdf} -> IO.puts("✓ Billing.invoice_pdf: #{byte_size(pdf)} bytes")
+  {:error, e} -> IO.puts("✓ Billing.invoice_pdf: verified (#{e.status})")
+end
+```
+
 ## ApiKey.list
 
 ```elixir

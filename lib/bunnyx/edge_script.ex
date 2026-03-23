@@ -303,28 +303,28 @@ defmodule Bunnyx.EdgeScript do
 
   # -- Variables --
 
-  @doc "Gets a variable by name."
-  @spec get_variable(Bunnyx.t() | keyword(), pos_integer(), String.t()) ::
+  @doc "Gets a variable by ID."
+  @spec get_variable(Bunnyx.t() | keyword(), pos_integer(), pos_integer()) ::
           {:ok, map()} | {:error, Bunnyx.Error.t()}
-  def get_variable(client, id, name) do
+  def get_variable(client, id, variable_id) do
     client = Bunnyx.resolve(client)
 
-    case Bunnyx.HTTP.request(client.req, :get, "/compute/script/#{id}/variables/#{name}", []) do
+    case Bunnyx.HTTP.request(client.req, :get, "/compute/script/#{id}/variables/#{variable_id}", []) do
       {:ok, body} -> {:ok, body}
       {:error, _} = error -> error
     end
   end
 
-  @doc "Adds a variable to an edge script."
+  @doc "Adds a variable to an edge script. Returns the created variable with its ID."
   @spec add_variable(Bunnyx.t() | keyword(), pos_integer(), keyword()) ::
-          {:ok, nil} | {:error, Bunnyx.Error.t()}
+          {:ok, map()} | {:error, Bunnyx.Error.t()}
   def add_variable(client, id, attrs) do
     client = Bunnyx.resolve(client)
 
     json = to_variable_body(attrs)
 
     case Bunnyx.HTTP.request(client.req, :post, "/compute/script/#{id}/variables/add", json: json) do
-      {:ok, _} -> {:ok, nil}
+      {:ok, body} -> {:ok, body}
       {:error, _} = error -> error
     end
   end

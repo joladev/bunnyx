@@ -180,16 +180,6 @@ defmodule Bunnyx.VideoLibraryTest do
     end
   end
 
-  describe "reset_all_api_keys/1" do
-    test "returns {:ok, nil}", %{client: client} do
-      expect(Bunnyx.HTTP, :request, fn _req, :post, "/videolibrary/resetApiKey", _opts ->
-        {:ok, ""}
-      end)
-
-      assert {:ok, nil} = Bunnyx.VideoLibrary.reset_all_api_keys(client)
-    end
-  end
-
   describe "reset_read_only_api_key/2" do
     test "returns {:ok, nil}", %{client: client} do
       expect(Bunnyx.HTTP, :request, fn _req,
@@ -200,16 +190,6 @@ defmodule Bunnyx.VideoLibraryTest do
       end)
 
       assert {:ok, nil} = Bunnyx.VideoLibrary.reset_read_only_api_key(client, 90_001)
-    end
-  end
-
-  describe "reset_all_read_only_api_keys/1" do
-    test "returns {:ok, nil}", %{client: client} do
-      expect(Bunnyx.HTTP, :request, fn _req, :post, "/videolibrary/resetReadOnlyApiKey", _opts ->
-        {:ok, ""}
-      end)
-
-      assert {:ok, nil} = Bunnyx.VideoLibrary.reset_all_read_only_api_keys(client)
     end
   end
 

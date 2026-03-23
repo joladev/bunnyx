@@ -209,18 +209,6 @@ defmodule Bunnyx.VideoLibrary do
     end
   end
 
-  @doc "Resets the API key for all video libraries."
-  @spec reset_all_api_keys(Bunnyx.t() | keyword()) ::
-          {:ok, nil} | {:error, Bunnyx.Error.t()}
-  def reset_all_api_keys(client) do
-    client = Bunnyx.resolve(client)
-
-    case Bunnyx.HTTP.request(client.req, :post, "/videolibrary/resetApiKey", []) do
-      {:ok, _} -> {:ok, nil}
-      {:error, _} = error -> error
-    end
-  end
-
   @doc "Resets the read-only API key for a specific video library."
   @spec reset_read_only_api_key(Bunnyx.t() | keyword(), pos_integer()) ::
           {:ok, nil} | {:error, Bunnyx.Error.t()}
@@ -228,18 +216,6 @@ defmodule Bunnyx.VideoLibrary do
     client = Bunnyx.resolve(client)
 
     case Bunnyx.HTTP.request(client.req, :post, "/videolibrary/#{id}/resetReadOnlyApiKey", []) do
-      {:ok, _} -> {:ok, nil}
-      {:error, _} = error -> error
-    end
-  end
-
-  @doc "Resets the read-only API key for all video libraries."
-  @spec reset_all_read_only_api_keys(Bunnyx.t() | keyword()) ::
-          {:ok, nil} | {:error, Bunnyx.Error.t()}
-  def reset_all_read_only_api_keys(client) do
-    client = Bunnyx.resolve(client)
-
-    case Bunnyx.HTTP.request(client.req, :post, "/videolibrary/resetReadOnlyApiKey", []) do
       {:ok, _} -> {:ok, nil}
       {:error, _} = error -> error
     end

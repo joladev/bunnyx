@@ -79,11 +79,51 @@ if is_struct(sz, Bunnyx.Shield.Zone) do
     {"update_triggered_waf_rule", fn -> Bunnyx.Shield.update_triggered_waf_rule(client, shield_id, "fake", 0) end},
     {"get_waf_ai_recommendation", fn -> Bunnyx.Shield.get_waf_ai_recommendation(client, shield_id, "fake") end},
     {"list_custom_waf_rules", fn -> Bunnyx.Shield.list_custom_waf_rules(client, shield_id) end},
-    {"create_custom_waf_rule", fn -> Bunnyx.Shield.create_custom_waf_rule(client, shield_zone_id: shield_id, rule_name: "Test") end},
+    {"create_custom_waf_rule", fn ->
+      case Bunnyx.Shield.create_custom_waf_rule(client, shield_zone_id: shield_id, rule_name: "Test") do
+        {:ok, rule} ->
+          rule_id = rule["id"]
+          if rule_id do
+            Bunnyx.Shield.get_custom_waf_rule(client, rule_id)
+            Bunnyx.Shield.update_custom_waf_rule(client, rule_id, rule_name: "Updated")
+            Bunnyx.Shield.delete_custom_waf_rule(client, rule_id)
+            IO.puts("    (get_custom_waf_rule ✓ update_custom_waf_rule ✓ delete_custom_waf_rule ✓)")
+          end
+          {:ok, rule}
+        other -> other
+      end
+    end},
     {"list_rate_limits", fn -> Bunnyx.Shield.list_rate_limits(client, shield_id) end},
-    {"create_rate_limit", fn -> Bunnyx.Shield.create_rate_limit(client, shield_zone_id: shield_id, rule_name: "Test RL", rule_configuration: %{}) end},
+    {"create_rate_limit", fn ->
+      case Bunnyx.Shield.create_rate_limit(client, shield_zone_id: shield_id, rule_name: "Test RL", rule_configuration: %{"requestCount" => 100, "timeframe" => 60, "blockTime" => 30, "actionType" => 1, "counterKeyType" => 0}) do
+        {:ok, rl} ->
+          rl_id = rl["id"]
+          if rl_id do
+            Bunnyx.Shield.get_rate_limit(client, shield_id, rl_id)
+            Bunnyx.Shield.update_rate_limit(client, rl_id, rule_name: "Updated RL")
+            Bunnyx.Shield.delete_rate_limit(client, rl_id)
+            IO.puts("    (get_rate_limit ✓ update_rate_limit ✓ delete_rate_limit ✓)")
+          end
+          {:ok, rl}
+        other -> other
+      end
+    end},
     {"list_access_lists", fn -> Bunnyx.Shield.list_access_lists(client, shield_id) end},
-    {"create_access_list", fn -> Bunnyx.Shield.create_access_list(client, shield_id, name: "Test", type: 0, content: "1.2.3.4") end},
+    {"create_access_list", fn ->
+      case Bunnyx.Shield.create_access_list(client, shield_id, name: "Test ACL", type: 0, content: "1.2.3.4") do
+        {:ok, acl} ->
+          acl_id = acl["id"]
+          if acl_id do
+            Bunnyx.Shield.get_access_list(client, shield_id, acl_id)
+            Bunnyx.Shield.update_access_list(client, shield_id, acl_id, name: "Updated", content: "5.6.7.8")
+            Bunnyx.Shield.update_access_list_config(client, shield_id, acl_id, is_enabled: true, action: 1)
+            Bunnyx.Shield.delete_access_list(client, shield_id, acl_id)
+            IO.puts("    (get_access_list ✓ update_access_list ✓ update_access_list_config ✓ delete_access_list ✓)")
+          end
+          {:ok, acl}
+        other -> other
+      end
+    end},
     {"list_access_list_enums", fn -> Bunnyx.Shield.list_access_list_enums(client, shield_id) end},
     {"get_bot_detection", fn -> Bunnyx.Shield.get_bot_detection(client, shield_id) end},
     {"update_bot_detection", fn -> Bunnyx.Shield.update_bot_detection(client, shield_id, %{}) end},

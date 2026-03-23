@@ -216,6 +216,7 @@ end
 
 ```elixir
 for {name, fun} <- [
+      {"fetch", fn -> Bunnyx.Stream.fetch(stream, url: "https://example.com/video.mp4") end},
       {"reencode", fn -> Bunnyx.Stream.reencode(stream, video.guid) end},
       {"repackage", fn -> Bunnyx.Stream.repackage(stream, video.guid) end},
       {"transcribe", fn -> Bunnyx.Stream.transcribe(stream, video.guid) end},
@@ -316,6 +317,6 @@ IO.puts("  Referrers ✓  Watermark ✓  API keys ✓")
 IO.puts("  Statistics ✓")
 IO.puts("  Stream video CRUD ✓  Upload ✓")
 IO.puts("  Collections ✓  Captions ✓  oEmbed ✓")
-IO.puts("  Video analytics ✓  Video actions ✓")
+IO.puts("  Video analytics ✓  Video actions ✓  Fetch ✓")
 IO.puts("═════════════════════════════════════════════")
 ```
