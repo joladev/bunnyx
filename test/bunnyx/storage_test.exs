@@ -107,7 +107,31 @@ defmodule Bunnyx.StorageTest do
                Bunnyx.Storage.put(client, "/file.txt", "content", checksum: "abc123")
     end
 
-    test "omits headers when no checksum", %{client: client} do
+    test "adds content-type header when provided", %{client: client} do
+      expect(Bunnyx.HTTP, :request, fn _req, :put, "/my-zone/file.json", opts ->
+        assert {"Content-Type", "application/json"} in opts[:headers]
+        {:ok, %{"HttpCode" => 201, "Message" => "File uploaded."}}
+      end)
+
+      assert {:ok, nil} =
+               Bunnyx.Storage.put(client, "/file.json", "{}", content_type: "application/json")
+    end
+
+    test "combines content-type and checksum headers", %{client: client} do
+      expect(Bunnyx.HTTP, :request, fn _req, :put, "/my-zone/file.txt", opts ->
+        assert {"Content-Type", "text/plain"} in opts[:headers]
+        assert {"Checksum", "abc123"} in opts[:headers]
+        {:ok, %{"HttpCode" => 201, "Message" => "File uploaded."}}
+      end)
+
+      assert {:ok, nil} =
+               Bunnyx.Storage.put(client, "/file.txt", "content",
+                 content_type: "text/plain",
+                 checksum: "abc123"
+               )
+    end
+
+    test "omits headers when no options", %{client: client} do
       expect(Bunnyx.HTTP, :request, fn _req, :put, "/my-zone/file.txt", opts ->
         refute Keyword.has_key?(opts, :headers)
         {:ok, %{"HttpCode" => 201, "Message" => "File uploaded."}}

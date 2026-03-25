@@ -99,6 +99,7 @@ defmodule Bunnyx.Storage do
 
   ## Options
 
+    * `:content_type` — MIME type (e.g. `"image/png"`, `"application/json"`)
     * `:checksum` — SHA-256 checksum for integrity verification
 
   """
@@ -107,7 +108,12 @@ defmodule Bunnyx.Storage do
   def put(client, path, data, opts \\ []) do
     client = resolve(client)
 
-    req_opts = maybe_put([body: data], :headers, checksum_header(opts))
+    headers =
+      []
+      |> prepend_header("Content-Type", opts[:content_type])
+      |> prepend_header("Checksum", opts[:checksum])
+
+    req_opts = maybe_put([body: data], :headers, headers)
 
     case Bunnyx.HTTP.request(client.req, :put, build_path(client.zone, path), req_opts) do
       {:ok, _} -> {:ok, nil}
@@ -134,13 +140,10 @@ defmodule Bunnyx.Storage do
     if String.ends_with?(path, "/"), do: path, else: path <> "/"
   end
 
-  defp checksum_header(opts) do
-    case Keyword.fetch(opts, :checksum) do
-      {:ok, checksum} -> [{"Checksum", checksum}]
-      :error -> nil
-    end
-  end
+  defp prepend_header(headers, _name, nil), do: headers
+  defp prepend_header(headers, name, value), do: [{name, value} | headers]
 
   defp maybe_put(opts, _key, nil), do: opts
+  defp maybe_put(opts, _key, []), do: opts
   defp maybe_put(opts, key, value), do: Keyword.put(opts, key, value)
 end
