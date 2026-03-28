@@ -1,6 +1,11 @@
 defmodule Bunnyx.Params do
-  @moduledoc false
-  # Shared helpers for converting snake_case keyword lists to API-format maps.
+  @moduledoc """
+  Shared helpers for converting snake_case keyword lists to API-format maps.
+
+  Used internally by all API modules to convert keyword attrs (e.g. `name: "my-zone"`)
+  into the PascalCase maps the bunny.net API expects (e.g. `%{"Name" => "my-zone"}`).
+  Unknown keys raise `ArgumentError` with the valid set listed.
+  """
 
   @doc """
   Converts a keyword list to a map using the given key mapping.
