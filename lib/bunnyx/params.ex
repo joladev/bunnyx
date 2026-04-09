@@ -1,14 +1,18 @@
 defmodule Bunnyx.Params do
   @moduledoc """
-  Shared helpers for converting snake_case keyword lists to API-format maps.
+  Shared helpers for converting snake_case attrs to API-format maps.
 
-  Used internally by all API modules to convert keyword attrs (e.g. `name: "my-zone"`)
-  into the PascalCase maps the bunny.net API expects (e.g. `%{"Name" => "my-zone"}`).
-  Unknown keys raise `ArgumentError` with the valid set listed.
+  Used internally by all API modules to convert attrs (keyword list or map, e.g.
+  `name: "my-zone"` or `%{name: "my-zone"}`) into the PascalCase maps the bunny.net
+  API expects (e.g. `%{"Name" => "my-zone"}`). Unknown keys raise `ArgumentError`
+  with the valid set listed.
   """
 
+  @typedoc "Attributes accepted by create/update functions: keyword list or atom-keyed map."
+  @type attrs :: keyword() | %{optional(atom()) => term()}
+
   @doc """
-  Converts a keyword list to a map using the given key mapping.
+  Converts attrs (keyword list or map) to a map using the given key mapping.
 
   Raises `ArgumentError` with a clear message if an unknown key is passed.
 
@@ -17,11 +21,14 @@ defmodule Bunnyx.Params do
       iex> Bunnyx.Params.map_keys!([name: "test"], %{name: "Name"})
       %{"Name" => "test"}
 
+      iex> Bunnyx.Params.map_keys!(%{name: "test"}, %{name: "Name"})
+      %{"Name" => "test"}
+
       iex> Bunnyx.Params.map_keys!([bad: "x"], %{name: "Name"})
       ** (ArgumentError) unknown key :bad. Valid keys: [:name]
 
   """
-  @spec map_keys!(keyword(), %{atom() => String.t()}) :: map()
+  @spec map_keys!(attrs(), %{atom() => String.t()}) :: map()
   def map_keys!(attrs, mapping) do
     Map.new(attrs, fn {key, value} ->
       case Map.fetch(mapping, key) do
@@ -43,7 +50,7 @@ defmodule Bunnyx.Params do
   Like `map_keys!/2` but only includes keys present in the mapping, ignoring extras.
   Useful for query param conversion where unknown keys should be silently dropped.
   """
-  @spec map_keys(keyword(), %{atom() => String.t()}) :: map()
+  @spec map_keys(attrs(), %{atom() => String.t()}) :: map()
   def map_keys(attrs, mapping) do
     for {key, value} <- attrs, mapped = Map.get(mapping, key), into: %{} do
       {mapped, value}

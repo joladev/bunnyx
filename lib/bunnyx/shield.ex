@@ -20,7 +20,7 @@ defmodule Bunnyx.Shield do
   alias Bunnyx.Shield.Zone
 
   @doc "Creates a Shield zone for a pull zone."
-  @spec create(Bunnyx.t() | keyword(), pos_integer(), keyword()) ::
+  @spec create(Bunnyx.t() | keyword(), pos_integer(), Bunnyx.Params.attrs()) ::
           {:ok, Zone.t()} | {:error, Bunnyx.Error.t()}
   def create(client, pull_zone_id, opts \\ []) do
     client = Bunnyx.resolve(client)
@@ -28,10 +28,10 @@ defmodule Bunnyx.Shield do
     json = %{"pullZoneId" => pull_zone_id}
 
     json =
-      if opts != [] do
-        Map.put(json, "shieldZone", Zone.to_request_body(opts))
-      else
+      if Enum.empty?(opts) do
         json
+      else
+        Map.put(json, "shieldZone", Zone.to_request_body(opts))
       end
 
     case Bunnyx.HTTP.request(client.req, :post, "/shield/shield-zone", json: json) do
@@ -111,7 +111,7 @@ defmodule Bunnyx.Shield do
   end
 
   @doc "Updates a Shield zone's configuration."
-  @spec update(Bunnyx.t() | keyword(), pos_integer(), keyword()) ::
+  @spec update(Bunnyx.t() | keyword(), pos_integer(), Bunnyx.Params.attrs()) ::
           {:ok, Zone.t()} | {:error, Bunnyx.Error.t()}
   def update(client, shield_zone_id, attrs) do
     client = Bunnyx.resolve(client)
@@ -285,15 +285,16 @@ defmodule Bunnyx.Shield do
     * `:rule_configuration` — rule config map (passed through as-is)
 
   """
-  @spec create_custom_waf_rule(Bunnyx.t() | keyword(), keyword()) ::
+  @spec create_custom_waf_rule(Bunnyx.t() | keyword(), Bunnyx.Params.attrs()) ::
           {:ok, map()} | {:error, Bunnyx.Error.t()}
   def create_custom_waf_rule(client, attrs) do
     client = Bunnyx.resolve(client)
+    attrs = Map.new(attrs)
 
     json =
       Map.merge(
-        %{"shieldZoneId" => Keyword.fetch!(attrs, :shield_zone_id)},
-        to_waf_body(Keyword.delete(attrs, :shield_zone_id))
+        %{"shieldZoneId" => Map.fetch!(attrs, :shield_zone_id)},
+        to_waf_body(Map.delete(attrs, :shield_zone_id))
       )
 
     case Bunnyx.HTTP.request(client.req, :post, "/shield/waf/custom-rule", json: json) do
@@ -315,7 +316,7 @@ defmodule Bunnyx.Shield do
   end
 
   @doc "Updates a custom WAF rule."
-  @spec update_custom_waf_rule(Bunnyx.t() | keyword(), pos_integer(), keyword()) ::
+  @spec update_custom_waf_rule(Bunnyx.t() | keyword(), pos_integer(), Bunnyx.Params.attrs()) ::
           {:ok, map()} | {:error, Bunnyx.Error.t()}
   def update_custom_waf_rule(client, rule_id, attrs) do
     client = Bunnyx.resolve(client)
@@ -725,7 +726,7 @@ defmodule Bunnyx.Shield do
   end
 
   @doc "Creates a rate limit for a Shield zone."
-  @spec create_rate_limit(Bunnyx.t() | keyword(), keyword()) ::
+  @spec create_rate_limit(Bunnyx.t() | keyword(), Bunnyx.Params.attrs()) ::
           {:ok, map()} | {:error, Bunnyx.Error.t()}
   def create_rate_limit(client, attrs) do
     client = Bunnyx.resolve(client)
@@ -739,7 +740,7 @@ defmodule Bunnyx.Shield do
   end
 
   @doc "Updates a rate limit."
-  @spec update_rate_limit(Bunnyx.t() | keyword(), pos_integer(), keyword()) ::
+  @spec update_rate_limit(Bunnyx.t() | keyword(), pos_integer(), Bunnyx.Params.attrs()) ::
           {:ok, map()} | {:error, Bunnyx.Error.t()}
   def update_rate_limit(client, rate_limit_id, attrs) do
     client = Bunnyx.resolve(client)
@@ -814,7 +815,7 @@ defmodule Bunnyx.Shield do
     * `:checksum` — SHA-256 checksum for integrity
 
   """
-  @spec create_access_list(Bunnyx.t() | keyword(), pos_integer(), keyword()) ::
+  @spec create_access_list(Bunnyx.t() | keyword(), pos_integer(), Bunnyx.Params.attrs()) ::
           {:ok, map()} | {:error, Bunnyx.Error.t()}
   def create_access_list(client, shield_zone_id, attrs) do
     client = Bunnyx.resolve(client)
@@ -833,7 +834,12 @@ defmodule Bunnyx.Shield do
   end
 
   @doc "Updates a custom access list."
-  @spec update_access_list(Bunnyx.t() | keyword(), pos_integer(), pos_integer(), keyword()) ::
+  @spec update_access_list(
+          Bunnyx.t() | keyword(),
+          pos_integer(),
+          pos_integer(),
+          Bunnyx.Params.attrs()
+        ) ::
           {:ok, map()} | {:error, Bunnyx.Error.t()}
   def update_access_list(client, shield_zone_id, access_list_id, attrs) do
     client = Bunnyx.resolve(client)

@@ -75,7 +75,7 @@ defmodule Bunnyx.MagicContainers do
     * `:volumes` — list of volume config maps
 
   """
-  @spec create(Bunnyx.t() | keyword(), keyword()) ::
+  @spec create(Bunnyx.t() | keyword(), Bunnyx.Params.attrs()) ::
           {:ok, App.t()} | {:error, Bunnyx.Error.t()}
   def create(client, attrs) do
     client = Bunnyx.resolve(client)
@@ -87,7 +87,7 @@ defmodule Bunnyx.MagicContainers do
   end
 
   @doc "Replaces the full application configuration."
-  @spec update(Bunnyx.t() | keyword(), String.t(), keyword()) ::
+  @spec update(Bunnyx.t() | keyword(), String.t(), Bunnyx.Params.attrs()) ::
           {:ok, App.t()} | {:error, Bunnyx.Error.t()}
   def update(client, app_id, attrs) do
     client = Bunnyx.resolve(client)

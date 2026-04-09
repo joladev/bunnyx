@@ -12,7 +12,7 @@ video streaming, Shield/WAF, edge scripting, magic containers, billing, and more
 - **Full typespecs** on every public function — Dialyzer-ready with IDE autocompletion
 - **Typed structs** — responses parsed into structs with snake_case fields, not raw JSON
 - **Runtime clients** — no `Application` config; pass credentials explicitly for easy multi-account and testing
-- **Keyword lists with validation** — snake_case attrs, clear errors on typos
+- **Validated attrs** — snake_case maps or keyword lists, clear errors on typos
 - **Documented** — `@moduledoc` and `@doc` with usage examples on every module and function
 
 ## Installation
@@ -34,16 +34,19 @@ with different credentials work side by side.
 client = Bunnyx.new(api_key: "sk-...")
 
 # CDN — returns a %Bunnyx.PullZone{} struct
-{:ok, zone} = Bunnyx.PullZone.create(client, name: "my-zone", origin_url: "https://example.com")
+{:ok, zone} = Bunnyx.PullZone.create(client, %{name: "my-zone", origin_url: "https://example.com"})
 zone.id      #=> 12345
 zone.name    #=> "my-zone"
 
 # DNS
-{:ok, dns} = Bunnyx.DnsZone.create(client, domain: "example.com")
-{:ok, record} = Bunnyx.DnsRecord.add(client, dns.id, type: 0, name: "www", value: "1.2.3.4", ttl: 300)
+{:ok, dns} = Bunnyx.DnsZone.create(client, %{domain: "example.com"})
+{:ok, record} = Bunnyx.DnsRecord.add(client, dns.id, %{type: 0, name: "www", value: "1.2.3.4", ttl: 300})
+
+# Keyword lists work too
+Bunnyx.PullZone.create(client, name: "my-zone", origin_url: "https://example.com")
 
 # Typos fail fast
-Bunnyx.PullZone.create(client, nme: "oops")
+Bunnyx.PullZone.create(client, %{nme: "oops"})
 #=> ** (ArgumentError) unknown key :nme. Valid keys: :name, :origin_url, ...
 ```
 
@@ -72,7 +75,7 @@ s3 = Bunnyx.S3.new(zone: "my-zone", storage_key: "pw-...", region: "de")
 
 # Video streaming
 stream = Bunnyx.Stream.new(api_key: "lib-key-...", library_id: 12345)
-{:ok, video} = Bunnyx.Stream.create(stream, title: "My Video")
+{:ok, video} = Bunnyx.Stream.create(stream, %{title: "My Video"})
 {:ok, nil} = Bunnyx.Stream.upload(stream, video.guid, video_binary)
 ```
 
@@ -98,7 +101,7 @@ stream = Bunnyx.Stream.new(api_key: "lib-key-...", library_id: 12345)
 
 ## Error handling
 
-All functions return `{:ok, result}` or `{:error, %Bunnyx.Error{}}`. Errors include
+API errors return `{:ok, result}` or `{:error, %Bunnyx.Error{}}`. Errors include
 the HTTP method and path for debugging:
 
 ```elixir
@@ -108,6 +111,8 @@ case Bunnyx.PullZone.get(client, 999) do
   {:error, error} -> raise "#{error.method} #{error.path}: #{error.message}"
 end
 ```
+
+Invalid arguments (unknown keys, typos) raise `ArgumentError` before any HTTP call.
 
 ## Design
 
@@ -121,7 +126,7 @@ explicit clients.
 - **Typed structs with typespecs.** Every public function has `@spec`. API responses
   are parsed into structs (`%PullZone{}`, `%DnsZone{}`, `%Video{}`, etc.) with
   snake_case fields — pattern match and dot-access instead of `body["CacheControlMaxAgeOverride"]`.
-- **Validated keyword attrs.** Create/update functions accept keyword lists with
+- **Validated attrs.** Create/update functions accept maps or keyword lists with
   snake_case keys, validated at call time. Unknown keys raise `ArgumentError` with
   the valid set listed.
 - **Secure by default.** Client structs derive `Inspect` excluding credentials.

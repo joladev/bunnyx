@@ -162,7 +162,8 @@ defmodule Bunnyx.VideoLibrary do
   end
 
   @doc "Creates a video library with the given attributes."
-  @spec create(Bunnyx.t() | keyword(), keyword()) :: {:ok, t()} | {:error, Bunnyx.Error.t()}
+  @spec create(Bunnyx.t() | keyword(), Bunnyx.Params.attrs()) ::
+          {:ok, t()} | {:error, Bunnyx.Error.t()}
   def create(client, attrs) do
     client = Bunnyx.resolve(client)
 
@@ -173,7 +174,7 @@ defmodule Bunnyx.VideoLibrary do
   end
 
   @doc "Updates a video library."
-  @spec update(Bunnyx.t() | keyword(), pos_integer(), keyword()) ::
+  @spec update(Bunnyx.t() | keyword(), pos_integer(), Bunnyx.Params.attrs()) ::
           {:ok, t()} | {:error, Bunnyx.Error.t()}
   def update(client, id, attrs) do
     client = Bunnyx.resolve(client)

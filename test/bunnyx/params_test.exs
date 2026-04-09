@@ -11,6 +11,13 @@ defmodule Bunnyx.ParamsTest do
                Params.map_keys!([name: "test", origin_url: "https://example.com"], mapping)
     end
 
+    test "converts atom-keyed map using mapping" do
+      mapping = %{name: "Name", origin_url: "OriginUrl"}
+
+      assert %{"Name" => "test", "OriginUrl" => "https://example.com"} =
+               Params.map_keys!(%{name: "test", origin_url: "https://example.com"}, mapping)
+    end
+
     test "raises ArgumentError on unknown key with valid keys listed" do
       mapping = %{name: "Name", origin_url: "OriginUrl"}
 

@@ -86,7 +86,8 @@ defmodule Bunnyx.EdgeScript do
     * `:linked_pull_zone_name` — name for the linked pull zone
 
   """
-  @spec create(Bunnyx.t() | keyword(), keyword()) :: {:ok, map()} | {:error, Bunnyx.Error.t()}
+  @spec create(Bunnyx.t() | keyword(), Bunnyx.Params.attrs()) ::
+          {:ok, map()} | {:error, Bunnyx.Error.t()}
   def create(client, attrs) do
     client = Bunnyx.resolve(client)
 
@@ -99,7 +100,7 @@ defmodule Bunnyx.EdgeScript do
   end
 
   @doc "Updates an edge script."
-  @spec update(Bunnyx.t() | keyword(), pos_integer(), keyword()) ::
+  @spec update(Bunnyx.t() | keyword(), pos_integer(), Bunnyx.Params.attrs()) ::
           {:ok, map()} | {:error, Bunnyx.Error.t()}
   def update(client, id, attrs) do
     client = Bunnyx.resolve(client)
@@ -321,7 +322,7 @@ defmodule Bunnyx.EdgeScript do
   end
 
   @doc "Adds a variable to an edge script. Returns the created variable with its ID."
-  @spec add_variable(Bunnyx.t() | keyword(), pos_integer(), keyword()) ::
+  @spec add_variable(Bunnyx.t() | keyword(), pos_integer(), Bunnyx.Params.attrs()) ::
           {:ok, map()} | {:error, Bunnyx.Error.t()}
   def add_variable(client, id, attrs) do
     client = Bunnyx.resolve(client)
@@ -335,7 +336,7 @@ defmodule Bunnyx.EdgeScript do
   end
 
   @doc "Adds or updates a variable (upsert)."
-  @spec upsert_variable(Bunnyx.t() | keyword(), pos_integer(), keyword()) ::
+  @spec upsert_variable(Bunnyx.t() | keyword(), pos_integer(), Bunnyx.Params.attrs()) ::
           {:ok, nil} | {:error, Bunnyx.Error.t()}
   def upsert_variable(client, id, attrs) do
     client = Bunnyx.resolve(client)
@@ -349,7 +350,12 @@ defmodule Bunnyx.EdgeScript do
   end
 
   @doc "Updates an existing variable."
-  @spec update_variable(Bunnyx.t() | keyword(), pos_integer(), pos_integer(), keyword()) ::
+  @spec update_variable(
+          Bunnyx.t() | keyword(),
+          pos_integer(),
+          pos_integer(),
+          Bunnyx.Params.attrs()
+        ) ::
           {:ok, nil} | {:error, Bunnyx.Error.t()}
   def update_variable(client, id, variable_id, attrs) do
     client = Bunnyx.resolve(client)

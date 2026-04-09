@@ -88,7 +88,7 @@ defmodule Bunnyx.DnsRecord do
   end
 
   @doc "Adds a DNS record to a zone."
-  @spec add(Bunnyx.t() | keyword(), pos_integer(), keyword()) ::
+  @spec add(Bunnyx.t() | keyword(), pos_integer(), Bunnyx.Params.attrs()) ::
           {:ok, t()} | {:error, Bunnyx.Error.t()}
   def add(client, zone_id, attrs) do
     client = Bunnyx.resolve(client)
@@ -102,7 +102,7 @@ defmodule Bunnyx.DnsRecord do
   end
 
   @doc "Updates a DNS record."
-  @spec update(Bunnyx.t() | keyword(), pos_integer(), pos_integer(), keyword()) ::
+  @spec update(Bunnyx.t() | keyword(), pos_integer(), pos_integer(), Bunnyx.Params.attrs()) ::
           {:ok, nil} | {:error, Bunnyx.Error.t()}
   def update(client, zone_id, id, attrs) do
     client = Bunnyx.resolve(client)

@@ -127,7 +127,8 @@ defmodule Bunnyx.Stream do
     * `:thumbnail_time` — time in ms to extract the thumbnail from
 
   """
-  @spec create(t() | keyword(), keyword()) :: {:ok, Video.t()} | {:error, Bunnyx.Error.t()}
+  @spec create(t() | keyword(), Bunnyx.Params.attrs()) ::
+          {:ok, Video.t()} | {:error, Bunnyx.Error.t()}
   def create(client, attrs) do
     client = resolve(client)
 
@@ -153,7 +154,7 @@ defmodule Bunnyx.Stream do
     * `:meta_tags` — list of meta tag maps
 
   """
-  @spec update(t() | keyword(), String.t(), keyword()) ::
+  @spec update(t() | keyword(), String.t(), Bunnyx.Params.attrs()) ::
           {:ok, Video.t()} | {:error, Bunnyx.Error.t()}
   def update(client, video_id, attrs) do
     client = resolve(client)

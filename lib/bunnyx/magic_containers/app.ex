@@ -62,7 +62,7 @@ defmodule Bunnyx.MagicContainers.App do
   end
 
   @doc false
-  @spec to_request_body(keyword()) :: map()
+  @spec to_request_body(Bunnyx.Params.attrs()) :: map()
   def to_request_body(attrs) do
     Bunnyx.Params.map_keys!(attrs, @reverse_mapping)
   end

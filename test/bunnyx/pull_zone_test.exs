@@ -81,6 +81,21 @@ defmodule Bunnyx.PullZoneTest do
       assert {:ok, %Bunnyx.PullZone{name: "new-zone"}} =
                Bunnyx.PullZone.create(client, name: "new-zone", origin_url: "https://example.com")
     end
+
+    test "accepts a map of attrs", %{client: client} do
+      response = Bunnyx.Factory.pull_zone_response(%{"Name" => "new-zone"})
+
+      expect(Bunnyx.HTTP, :request, fn _req, :post, "/pullzone", opts ->
+        assert opts[:json] == %{"Name" => "new-zone", "OriginUrl" => "https://example.com"}
+        {:ok, response}
+      end)
+
+      assert {:ok, %Bunnyx.PullZone{name: "new-zone"}} =
+               Bunnyx.PullZone.create(client, %{
+                 name: "new-zone",
+                 origin_url: "https://example.com"
+               })
+    end
   end
 
   describe "update/3" do
