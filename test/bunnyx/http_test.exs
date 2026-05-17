@@ -186,24 +186,19 @@ defmodule Bunnyx.HTTPTest do
 
     test "emits telemetry start and stop events on success", %{req: req} do
       ref = make_ref()
-      pid = self()
 
       :telemetry.attach(
         "test-start",
         [:bunnyx, :request, :start],
-        fn _event, measurements, metadata, _ ->
-          send(pid, {:start, ref, measurements, metadata})
-        end,
-        nil
+        &Bunnyx.HTTPTest.handle_telemetry_start/4,
+        %{pid: self(), ref: ref}
       )
 
       :telemetry.attach(
         "test-stop",
         [:bunnyx, :request, :stop],
-        fn _event, measurements, metadata, _ ->
-          send(pid, {:stop, ref, measurements, metadata})
-        end,
-        nil
+        &Bunnyx.HTTPTest.handle_telemetry_stop/4,
+        %{pid: self(), ref: ref}
       )
 
       expect(Req, :request, fn _req, _opts ->
@@ -223,15 +218,12 @@ defmodule Bunnyx.HTTPTest do
 
     test "emits telemetry exception event on transport error", %{req: req} do
       ref = make_ref()
-      pid = self()
 
       :telemetry.attach(
         "test-exc",
         [:bunnyx, :request, :exception],
-        fn _event, measurements, metadata, _ ->
-          send(pid, {:exception, ref, measurements, metadata})
-        end,
-        nil
+        &Bunnyx.HTTPTest.handle_telemetry_exception/4,
+        %{pid: self(), ref: ref}
       )
 
       expect(Req, :request, fn _req, _opts ->
@@ -245,5 +237,26 @@ defmodule Bunnyx.HTTPTest do
 
       :telemetry.detach("test-exc")
     end
+  end
+
+  # Telemetry handler callbacks — named module functions avoid the
+  # "local function" telemetry warning by allowing direct calls.
+
+  @spec handle_telemetry_start(term(), map(), map(), %{pid: pid(), ref: reference()}) ::
+          :ok
+  def handle_telemetry_start(_event, measurements, call_metadata, config) do
+    send(config.pid, {:start, config.ref, measurements, call_metadata})
+  end
+
+  @spec handle_telemetry_stop(term(), map(), map(), %{pid: pid(), ref: reference()}) ::
+          :ok
+  def handle_telemetry_stop(_event, measurements, call_metadata, config) do
+    send(config.pid, {:stop, config.ref, measurements, call_metadata})
+  end
+
+  @spec handle_telemetry_exception(term(), map(), map(), %{pid: pid(), ref: reference()}) ::
+          :ok
+  def handle_telemetry_exception(_event, measurements, call_metadata, config) do
+    send(config.pid, {:exception, config.ref, measurements, call_metadata})
   end
 end
