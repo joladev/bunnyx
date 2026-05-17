@@ -143,3 +143,7 @@ SDK function against the real bunny.net API. Set `LB_BUNNY_API_KEY` and run the 
 ## License
 
 MIT — see [LICENSE](LICENSE).
+
+# LLM disclosure
+
+The creation of this library was expedited by LLMs, a mix of local and remote models, with strict human supervision. The surface area of the bunny.net API is large and it made the creation of this library feasible. The code and library design follows my own preferences and what I consider to be clean, best practice Elixir code.
