@@ -1,5 +1,7 @@
 # Bunnyx: S3
 
+## Section
+
 S3-compatible storage — basic ops + multipart uploads.
 
 ## Setup
@@ -35,8 +37,8 @@ IO.puts("✓ Cleanup done")
 ## Create storage zone (S3 enabled)
 
 ```elixir
-# Zone tier 1 = SSD (supports S3)
-{:ok, sz} = Bunnyx.StorageZone.create(client, name: sz_name, region: "DE", zone_tier: 1)
+# storage_zone_type: 1 enables S3 compatibility (requires S3 beta access)
+{:ok, sz} = Bunnyx.StorageZone.create(client, name: sz_name, region: "DE", storage_zone_type: 1)
 %Bunnyx.StorageZone{} = sz
 
 IO.puts("✓ StorageZone created: #{sz.id} (#{sz.name})")
@@ -184,3 +186,5 @@ IO.puts("  Basic ops: put/get/head/list/copy/delete ✓")
 IO.puts("  Multipart: create/upload/list/complete/abort ✓")
 IO.puts("══════════════════════════════════════════")
 ```
+
+<!-- livebook:{"offset":5196,"stamp":{"token":"XCP.fOMlWL9OfyXxEpDovfeSHH8bJNqU-upcIByIdcjJXydlSUf38maleqCeJ5gEYjoL9gEAI1-B2TLv50DNddqLtApQfpxhZAz8tipS6qjHyImuYejcgj3Qbw","version":2}} -->

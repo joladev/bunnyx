@@ -112,7 +112,8 @@ defmodule Bunnyx.Factory do
         "StorageHostname" => "storage.bunnycdn.com",
         "Rewrite404To200" => false,
         "Custom404FilePath" => "",
-        "ZoneTier" => 0
+        "ZoneTier" => 0,
+        "StorageZoneType" => 0
       },
       overrides
     )
