@@ -18,6 +18,13 @@ defmodule Bunnyx.StorageZone do
         region: "DE"
       )
 
+      # For S3-compatible storage (requires S3 beta access):
+      {:ok, s3_zone} = Bunnyx.StorageZone.create(client,
+        name: "my-s3-zone",
+        region: "DE",
+        storage_zone_type: 1
+      )
+
       {:ok, zone} = Bunnyx.StorageZone.get(client, zone.id)
       {:ok, page} = Bunnyx.StorageZone.list(client)
       {:ok, zone} = Bunnyx.StorageZone.update(client, zone.id, rewrite_404_to_200: true)
@@ -38,7 +45,8 @@ defmodule Bunnyx.StorageZone do
           storage_hostname: String.t() | nil,
           rewrite_404_to_200: boolean() | nil,
           custom_404_file_path: String.t() | nil,
-          zone_tier: integer() | nil
+          zone_tier: integer() | nil,
+          storage_zone_type: integer() | nil
         }
 
   @derive {Inspect, except: [:password, :read_only_password]}
@@ -56,7 +64,8 @@ defmodule Bunnyx.StorageZone do
     :storage_hostname,
     :rewrite_404_to_200,
     :custom_404_file_path,
-    :zone_tier
+    :zone_tier,
+    :storage_zone_type
   ]
 
   @field_mapping %{
@@ -74,6 +83,7 @@ defmodule Bunnyx.StorageZone do
     "Rewrite404To200" => :rewrite_404_to_200,
     "Custom404FilePath" => :custom_404_file_path,
     "ZoneTier" => :zone_tier,
+    "StorageZoneType" => :storage_zone_type,
     # Write-only: update endpoint uses different names than the response
     "OriginUrl" => :origin_url,
     "ReplicationZones" => :replication_zones
@@ -139,7 +149,26 @@ defmodule Bunnyx.StorageZone do
     end
   end
 
-  @doc "Creates a storage zone with the given attributes."
+  @doc """
+  Creates a storage zone with the given attributes.
+
+  ## Options
+
+    * `:name` (required) — storage zone name
+    * `:region` (required) — `"DE"`, `"NY"`, `"LA"`, `"SG"`, etc.
+    * `:zone_tier` — storage tier (0=HDD, 1=SSD)
+    * `:storage_zone_type` — S3 compatibility (0=Standard, 1=S3-compatible)
+    * Other options: `:replication_regions`, `:origin_url`
+
+  ## S3-compatible zones
+
+  To create an S3-compatible storage zone, pass `storage_zone_type: 1`:
+
+      Bunnyx.StorageZone.create(client, name: "my-s3-zone", region: "DE", storage_zone_type: 1)
+
+  Note: S3 must be enabled for your bunny.net account. Standard zones use
+  `storage.bunnycdn.com` while S3 zones use `{region}-s3.storage.bunnycdn.com`.
+  """
   @spec create(Bunnyx.t() | keyword(), Bunnyx.Params.attrs()) ::
           {:ok, t()} | {:error, Bunnyx.Error.t()}
   def create(client, attrs) do

@@ -60,7 +60,7 @@ Four client types because bunny.net uses different auth and base URLs:
 
 ### Integration testing
 
-`livebooks/integration.livemd` runs against the real bunny.net API. Requires a `LB_BUNNY_API_KEY` env var. Covers Storage Zone, Pull Zone, DNS, Video Library, and Stream lifecycles.
+Livebooks under `livebooks/` run against the real bunny.net API. Each is self-contained (its own `Mix.install` + client setup) and requires a `LB_BUNNY_API_KEY` env var. Coverage is split per area: `basics.livemd` (Country, Region, Statistics, Billing, Account, ApiKey, Logging), `cdn.livemd`, `compute.livemd`, `dns.livemd`, `s3.livemd`, `shield.livemd`, `storage.livemd`, `video.livemd`.
 
 ## Quality checks
 

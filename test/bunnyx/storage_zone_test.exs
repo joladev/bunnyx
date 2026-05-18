@@ -91,6 +91,18 @@ defmodule Bunnyx.StorageZoneTest do
       assert {:ok, %Bunnyx.StorageZone{name: "new-zone"}} =
                Bunnyx.StorageZone.create(client, name: "new-zone", region: "DE")
     end
+
+    test "sends storage_zone_type for S3-compatible zones", %{client: client} do
+      response = Bunnyx.Factory.storage_zone_response(%{"StorageZoneType" => 1})
+
+      expect(Bunnyx.HTTP, :request, fn _req, :post, "/storagezone", opts ->
+        assert opts[:json]["StorageZoneType"] == 1
+        {:ok, response}
+      end)
+
+      assert {:ok, %Bunnyx.StorageZone{storage_zone_type: 1}} =
+               Bunnyx.StorageZone.create(client, name: "s3-zone", region: "DE", storage_zone_type: 1)
+    end
   end
 
   describe "update/3" do
