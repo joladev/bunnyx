@@ -101,7 +101,11 @@ defmodule Bunnyx.StorageZoneTest do
       end)
 
       assert {:ok, %Bunnyx.StorageZone{storage_zone_type: 1}} =
-               Bunnyx.StorageZone.create(client, name: "s3-zone", region: "DE", storage_zone_type: 1)
+               Bunnyx.StorageZone.create(client,
+                 name: "s3-zone",
+                 region: "DE",
+                 storage_zone_type: 1
+               )
     end
   end
 
