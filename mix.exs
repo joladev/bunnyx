@@ -8,7 +8,7 @@ defmodule Bunnyx.MixProject do
     [
       app: :bunnyx,
       version: @version,
-      elixir: "~> 1.19",
+      elixir: "~> 1.15",
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
       warnings_as_errors: true,
