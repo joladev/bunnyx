@@ -21,6 +21,18 @@ defmodule Bunnyx.Factory do
     )
   end
 
+  def hostname_response(overrides \\ %{}) do
+    Map.merge(
+      %{
+        "Id" => 1,
+        "Value" => "example.b-cdn.net",
+        "ForceSSL" => false,
+        "HasCertificate" => false
+      },
+      overrides
+    )
+  end
+
   def storage_object_response(overrides \\ %{}) do
     Map.merge(
       %{

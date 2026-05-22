@@ -18,7 +18,16 @@ defmodule Bunnyx.PullZone do
       {:ok, page} = Bunnyx.PullZone.list(client)
       {:ok, zone} = Bunnyx.PullZone.update(client, zone.id, cache_control_max_age_override: 3600)
       {:ok, nil} = Bunnyx.PullZone.delete(client, zone.id)
+
+  Hostnames on a fetched zone are parsed into `Bunnyx.PullZone.Hostname` structs
+  exposing `:value`, `:force_ssl`, and `:has_certificate`:
+
+      {:ok, zone} = Bunnyx.PullZone.get(client, zone.id)
+      Enum.find(zone.hostnames, &(&1.value == "status.example.com"))
+      #=> %Bunnyx.PullZone.Hostname{value: "status.example.com", has_certificate: true, ...}
   """
+
+  alias Bunnyx.PullZone.Hostname
 
   @type t :: %__MODULE__{
           id: pos_integer() | nil,
@@ -26,7 +35,7 @@ defmodule Bunnyx.PullZone do
           origin_url: String.t() | nil,
           enabled: boolean() | nil,
           suspended: boolean() | nil,
-          hostnames: [map()] | nil,
+          hostnames: [Hostname.t()] | nil,
           storage_zone_id: integer() | nil,
           monthly_bandwidth_limit: integer() | nil,
           monthly_bandwidth_used: integer() | nil,
@@ -574,11 +583,17 @@ defmodule Bunnyx.PullZone do
   defp from_response(data) when is_map(data) do
     fields =
       for {pascal, atom} <- @field_mapping, Map.has_key?(data, pascal), into: %{} do
-        {atom, data[pascal]}
+        {atom, decode_field(pascal, data[pascal])}
       end
 
     struct(__MODULE__, fields)
   end
+
+  defp decode_field("Hostnames", hostnames) when is_list(hostnames) do
+    Enum.map(hostnames, &Hostname.from_response/1)
+  end
+
+  defp decode_field(_pascal, value), do: value
 
   defp to_request_body(attrs) do
     Bunnyx.Params.map_keys!(attrs, @reverse_mapping)

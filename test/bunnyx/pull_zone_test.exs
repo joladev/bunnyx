@@ -2,6 +2,8 @@ defmodule Bunnyx.PullZoneTest do
   use ExUnit.Case, async: true
   use Mimic
 
+  alias Bunnyx.PullZone.Hostname
+
   setup do
     %{client: Bunnyx.new(api_key: "sk-test")}
   end
@@ -58,6 +60,48 @@ defmodule Bunnyx.PullZoneTest do
                Bunnyx.PullZone.get(client, 12_345)
     end
 
+    test "parses hostnames into Hostname structs", %{client: client} do
+      response =
+        Bunnyx.Factory.pull_zone_response(%{
+          "Hostnames" => [
+            Bunnyx.Factory.hostname_response(%{
+              "Id" => 1,
+              "Value" => "status.example.com",
+              "ForceSSL" => true,
+              "HasCertificate" => true
+            }),
+            Bunnyx.Factory.hostname_response(%{
+              "Id" => 2,
+              "Value" => "12345.b-cdn.net",
+              "ForceSSL" => false,
+              "HasCertificate" => false
+            })
+          ]
+        })
+
+      expect(Bunnyx.HTTP, :request, fn _req, :get, "/pullzone/12345", _opts ->
+        {:ok, response}
+      end)
+
+      assert {:ok,
+              %Bunnyx.PullZone{
+                hostnames: [
+                  %Hostname{
+                    id: 1,
+                    value: "status.example.com",
+                    force_ssl: true,
+                    has_certificate: true
+                  },
+                  %Hostname{
+                    id: 2,
+                    value: "12345.b-cdn.net",
+                    force_ssl: false,
+                    has_certificate: false
+                  }
+                ]
+              }} = Bunnyx.PullZone.get(client, 12_345)
+    end
+
     test "returns error on failure", %{client: client} do
       error = %Bunnyx.Error{status: 404, message: "Not found"}
 
@@ -66,6 +110,21 @@ defmodule Bunnyx.PullZoneTest do
       end)
 
       assert {:error, ^error} = Bunnyx.PullZone.get(client, 999)
+    end
+  end
+
+  describe "Hostname.from_response/1" do
+    test "leaves missing optional fields as nil" do
+      assert %Hostname{
+               id: 1,
+               value: "x.example.com",
+               force_ssl: nil,
+               has_certificate: nil
+             } =
+               Hostname.from_response(%{
+                 "Id" => 1,
+                 "Value" => "x.example.com"
+               })
     end
   end
 
