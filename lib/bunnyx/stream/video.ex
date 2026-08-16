@@ -25,7 +25,8 @@ defmodule Bunnyx.Stream.Video do
           average_watch_time: integer() | nil,
           total_watch_time: integer() | nil,
           category: String.t() | nil,
-          has_original: boolean() | nil
+          has_original: boolean() | nil,
+          meta_tags: [map()] | nil
         }
 
   defstruct [
@@ -50,7 +51,8 @@ defmodule Bunnyx.Stream.Video do
     :average_watch_time,
     :total_watch_time,
     :category,
-    :has_original
+    :has_original,
+    :meta_tags
   ]
 
   @field_mapping %{
@@ -75,7 +77,8 @@ defmodule Bunnyx.Stream.Video do
     "averageWatchTime" => :average_watch_time,
     "totalWatchTime" => :total_watch_time,
     "category" => :category,
-    "hasOriginal" => :has_original
+    "hasOriginal" => :has_original,
+    "metaTags" => :meta_tags
   }
 
   @doc false
