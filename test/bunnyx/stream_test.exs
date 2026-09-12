@@ -21,7 +21,11 @@ defmodule Bunnyx.StreamTest do
       assert [
                %Bunnyx.Stream.Video{
                  guid: "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-                 title: "My Video"
+                 title: "My Video",
+                 meta_tags: [
+                   %{"property" => "og:title", "value" => "My Video"},
+                   %{"property" => "og:description", "value" => "A test video"}
+                 ]
                }
              ] =
                page.items
@@ -110,6 +114,22 @@ defmodule Bunnyx.StreamTest do
 
       assert {:ok, %Bunnyx.Stream.Video{title: "Updated"}} =
                Bunnyx.Stream.update(client, "abc-123", title: "Updated")
+    end
+
+    test "sends meta_tags unchanged", %{client: client} do
+      meta_tags = [
+        %{"property" => "og:title", "value" => "My Video"},
+        %{"property" => "og:description", "value" => "A test video"}
+      ]
+
+      response = Bunnyx.Factory.video_response()
+
+      expect(Bunnyx.HTTP, :request, fn _req, :post, "/library/90001/videos/abc-123", opts ->
+        assert opts[:json] == %{"metaTags" => meta_tags}
+        {:ok, response}
+      end)
+
+      assert {:ok, _video} = Bunnyx.Stream.update(client, "abc-123", meta_tags: meta_tags)
     end
 
     test "returns error on failure", %{client: client} do

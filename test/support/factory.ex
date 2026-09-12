@@ -212,7 +212,11 @@ defmodule Bunnyx.Factory do
         "averageWatchTime" => 90,
         "totalWatchTime" => 90_000,
         "category" => "other",
-        "hasOriginal" => true
+        "hasOriginal" => true,
+        "metaTags" => [
+          %{"property" => "og:title", "value" => "My Video"},
+          %{"property" => "og:description", "value" => "A test video"}
+        ]
       },
       overrides
     )
